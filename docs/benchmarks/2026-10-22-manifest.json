@@ -1,0 +1,1076 @@
+{
+  "version": 1,
+  "created_utc": "2026-10-22T10:36:56.141133+00:00",
+  "environment": {
+    "python": "3.13.15 (main, Sep 24 2026, 17:46:40) [Clang 22.1.3 ]",
+    "os": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+    "cpu": "arm",
+    "pygame_ce": "2.5.8",
+    "source_sha256": "4a9c58c27c2c8a0ad3d9e30ce02742b057c23d2c0fcdefef6774a6fa9ca8d93f"
+  },
+  "settings": {
+    "version": 1,
+    "maps": [
+      "pipes_problem/maps/pipes-4x4-261.json",
+      "pipes_problem/maps/pipes-4x4-262.json",
+      "pipes_problem/maps/pipes-4x4-263.json",
+      "pipes_problem/maps/pipes-5x5-261.json",
+      "pipes_problem/maps/pipes-5x5-262.json",
+      "pipes_problem/maps/pipes-5x5-263.json",
+      "pipes_problem/maps/pipes-7x7-261.json",
+      "pipes_problem/maps/pipes-7x7-262.json",
+      "pipes_problem/maps/pipes-7x7-263.json"
+    ],
+    "algorithms": [
+      "dfs",
+      "greedy_best_first"
+    ],
+    "repetitions": 5,
+    "time_limit_seconds": 30,
+    "max_expansions": 200000,
+    "output_directory": "results"
+  },
+  "algorithms": {
+    "dfs": {
+      "order": "row-major",
+      "pruning": "boundary, forward checking, cycle, potential connectivity"
+    },
+    "greedy_best_first": {
+      "order": "row-major",
+      "heuristic": "sum(log2(remaining orientation-domain size)); deeper states break ties",
+      "pruning": "same as DFS"
+    }
+  },
+  "measurement": {
+    "time": "perf_counter, headless, no trace",
+    "memory": "separate tracemalloc replay with same expansion count; not process RSS",
+    "unavailable_memory": "blank if replay differs"
+  },
+  "maps": [
+    {
+      "puzzle_id": "pipes-4x4-261",
+      "sha256": "16f71cfa019f8c1f59ba7ff72a0baad68eb86eee72cde3d66cd17223837beff0",
+      "map": {
+        "size": 4,
+        "source": [
+          2,
+          2
+        ],
+        "tiles": [
+          [
+            "E",
+            "NW",
+            "N",
+            "ES"
+          ],
+          [
+            "S",
+            "NS",
+            "N",
+            "EW"
+          ],
+          [
+            "ESW",
+            "NSW",
+            "NESW",
+            "NES"
+          ],
+          [
+            "ES",
+            "S",
+            "E",
+            "S"
+          ]
+        ]
+      }
+    },
+    {
+      "puzzle_id": "pipes-4x4-262",
+      "sha256": "aad8988a3ff33b903e5dc439aca3e5b515d9eb098144d166954a1d05f6619f0c",
+      "map": {
+        "size": 4,
+        "source": [
+          2,
+          2
+        ],
+        "tiles": [
+          [
+            "E",
+            "ES",
+            "SW",
+            "N"
+          ],
+          [
+            "NW",
+            "SW",
+            "NEW",
+            "ES"
+          ],
+          [
+            "N",
+            "W",
+            "EW",
+            "N"
+          ],
+          [
+            "SW",
+            "ESW",
+            "NSW",
+            "NE"
+          ]
+        ]
+      }
+    },
+    {
+      "puzzle_id": "pipes-4x4-263",
+      "sha256": "fe8a0198b3bc5a4874c31702d9038e1fd3e5d87bf81cf811c8b90c24e6253f28",
+      "map": {
+        "size": 4,
+        "source": [
+          2,
+          2
+        ],
+        "tiles": [
+          [
+            "S",
+            "NE",
+            "W",
+            "W"
+          ],
+          [
+            "W",
+            "NS",
+            "NES",
+            "SW"
+          ],
+          [
+            "ESW",
+            "NSW",
+            "NEW",
+            "S"
+          ],
+          [
+            "E",
+            "N",
+            "NSW",
+            "SW"
+          ]
+        ]
+      }
+    },
+    {
+      "puzzle_id": "pipes-5x5-261",
+      "sha256": "555fa05cd486e6784d0219ca0cfb1c9b96ded0d491908c9ea72ada1a1500cafa",
+      "map": {
+        "size": 5,
+        "source": [
+          2,
+          2
+        ],
+        "tiles": [
+          [
+            "N",
+            "S",
+            "ES",
+            "S",
+            "NE"
+          ],
+          [
+            "SW",
+            "NW",
+            "EW",
+            "SW",
+            "NSW"
+          ],
+          [
+            "ES",
+            "NESW",
+            "NESW",
+            "NEW",
+            "S"
+          ],
+          [
+            "EW",
+            "N",
+            "E",
+            "NS",
+            "W"
+          ],
+          [
+            "W",
+            "W",
+            "NS",
+            "NEW",
+            "SW"
+          ]
+        ]
+      }
+    },
+    {
+      "puzzle_id": "pipes-5x5-262",
+      "sha256": "00c73d1b5eb5a8359a9cda7b51051822239b0b770ce61887988bcd8f38c678cf",
+      "map": {
+        "size": 5,
+        "source": [
+          2,
+          2
+        ],
+        "tiles": [
+          [
+            "N",
+            "N",
+            "NS",
+            "NE",
+            "S"
+          ],
+          [
+            "ES",
+            "ES",
+            "W",
+            "EW",
+            "EW"
+          ],
+          [
+            "W",
+            "NSW",
+            "NS",
+            "NEW",
+            "NW"
+          ],
+          [
+            "ES",
+            "NEW",
+            "NESW",
+            "NESW",
+            "NW"
+          ],
+          [
+            "E",
+            "E",
+            "SW",
+            "W",
+            "W"
+          ]
+        ]
+      }
+    },
+    {
+      "puzzle_id": "pipes-5x5-263",
+      "sha256": "83a195a442dc120ae2e17953db56a9cf9b989c6898d586373d9f897d6b343d9a",
+      "map": {
+        "size": 5,
+        "source": [
+          2,
+          2
+        ],
+        "tiles": [
+          [
+            "NE",
+            "S",
+            "E",
+            "E",
+            "SW"
+          ],
+          [
+            "EW",
+            "W",
+            "NS",
+            "W",
+            "EW"
+          ],
+          [
+            "NEW",
+            "NES",
+            "NESW",
+            "NESW",
+            "NEW"
+          ],
+          [
+            "NEW",
+            "E",
+            "NS",
+            "S",
+            "EW"
+          ],
+          [
+            "S",
+            "N",
+            "NEW",
+            "N",
+            "S"
+          ]
+        ]
+      }
+    },
+    {
+      "puzzle_id": "pipes-7x7-261",
+      "sha256": "8f37fd84843ae5bb85e26f94f3fe803408e4de142b3fe8c63c5adb87ab3f1dd1",
+      "map": {
+        "size": 7,
+        "source": [
+          3,
+          3
+        ],
+        "tiles": [
+          [
+            "W",
+            "E",
+            "N",
+            "ES",
+            "N",
+            "NE",
+            "W"
+          ],
+          [
+            "NE",
+            "ESW",
+            "ESW",
+            "EW",
+            "N",
+            "EW",
+            "N"
+          ],
+          [
+            "N",
+            "NE",
+            "EW",
+            "EW",
+            "NEW",
+            "NEW",
+            "NSW"
+          ],
+          [
+            "S",
+            "ESW",
+            "NESW",
+            "NEW",
+            "NESW",
+            "ES",
+            "E"
+          ],
+          [
+            "N",
+            "N",
+            "W",
+            "ES",
+            "NES",
+            "ES",
+            "NW"
+          ],
+          [
+            "ES",
+            "NESW",
+            "NEW",
+            "ESW",
+            "NEW",
+            "NW",
+            "S"
+          ],
+          [
+            "W",
+            "NW",
+            "W",
+            "W",
+            "S",
+            "NW",
+            "E"
+          ]
+        ]
+      }
+    },
+    {
+      "puzzle_id": "pipes-7x7-262",
+      "sha256": "7e1f9f0feb372417f4379a2e503f8a6c2d524cf2da190ed523a92529d5e8cea6",
+      "map": {
+        "size": 7,
+        "source": [
+          3,
+          3
+        ],
+        "tiles": [
+          [
+            "S",
+            "ESW",
+            "S",
+            "N",
+            "NE",
+            "N",
+            "E"
+          ],
+          [
+            "S",
+            "NSW",
+            "NS",
+            "NESW",
+            "ESW",
+            "E",
+            "NES"
+          ],
+          [
+            "S",
+            "S",
+            "NS",
+            "NEW",
+            "S",
+            "E",
+            "NS"
+          ],
+          [
+            "ES",
+            "EW",
+            "EW",
+            "NEW",
+            "ES",
+            "ESW",
+            "NES"
+          ],
+          [
+            "ES",
+            "NW",
+            "S",
+            "ESW",
+            "NE",
+            "S",
+            "NE"
+          ],
+          [
+            "NS",
+            "NEW",
+            "NEW",
+            "NESW",
+            "E",
+            "SW",
+            "S"
+          ],
+          [
+            "S",
+            "S",
+            "N",
+            "ESW",
+            "EW",
+            "ESW",
+            "E"
+          ]
+        ]
+      }
+    },
+    {
+      "puzzle_id": "pipes-7x7-263",
+      "sha256": "b5bdb984c016928f3fa971d15da4c9cc518c2d43a6d37349cc637b9494d04bcb",
+      "map": {
+        "size": 7,
+        "source": [
+          3,
+          3
+        ],
+        "tiles": [
+          [
+            "S",
+            "ES",
+            "SW",
+            "W",
+            "W",
+            "NES",
+            "NE"
+          ],
+          [
+            "N",
+            "ESW",
+            "NESW",
+            "E",
+            "N",
+            "EW",
+            "E"
+          ],
+          [
+            "NW",
+            "NS",
+            "NEW",
+            "NE",
+            "NSW",
+            "ESW",
+            "E"
+          ],
+          [
+            "E",
+            "SW",
+            "NSW",
+            "NESW",
+            "ESW",
+            "NS",
+            "W"
+          ],
+          [
+            "E",
+            "NEW",
+            "N",
+            "NS",
+            "ESW",
+            "NSW",
+            "NE"
+          ],
+          [
+            "SW",
+            "NE",
+            "NES",
+            "SW",
+            "EW",
+            "EW",
+            "NS"
+          ],
+          [
+            "NE",
+            "E",
+            "SW",
+            "W",
+            "E",
+            "S",
+            "W"
+          ]
+        ]
+      }
+    }
+  ],
+  "runs": [
+    {
+      "csv_row": 1,
+      "repetition": 1,
+      "expanded": 17,
+      "error": ""
+    },
+    {
+      "csv_row": 2,
+      "repetition": 2,
+      "expanded": 17,
+      "error": ""
+    },
+    {
+      "csv_row": 3,
+      "repetition": 3,
+      "expanded": 17,
+      "error": ""
+    },
+    {
+      "csv_row": 4,
+      "repetition": 4,
+      "expanded": 17,
+      "error": ""
+    },
+    {
+      "csv_row": 5,
+      "repetition": 5,
+      "expanded": 17,
+      "error": ""
+    },
+    {
+      "csv_row": 6,
+      "repetition": 1,
+      "expanded": 17,
+      "error": ""
+    },
+    {
+      "csv_row": 7,
+      "repetition": 2,
+      "expanded": 17,
+      "error": ""
+    },
+    {
+      "csv_row": 8,
+      "repetition": 3,
+      "expanded": 17,
+      "error": ""
+    },
+    {
+      "csv_row": 9,
+      "repetition": 4,
+      "expanded": 17,
+      "error": ""
+    },
+    {
+      "csv_row": 10,
+      "repetition": 5,
+      "expanded": 17,
+      "error": ""
+    },
+    {
+      "csv_row": 11,
+      "repetition": 1,
+      "expanded": 21,
+      "error": ""
+    },
+    {
+      "csv_row": 12,
+      "repetition": 2,
+      "expanded": 21,
+      "error": ""
+    },
+    {
+      "csv_row": 13,
+      "repetition": 3,
+      "expanded": 21,
+      "error": ""
+    },
+    {
+      "csv_row": 14,
+      "repetition": 4,
+      "expanded": 21,
+      "error": ""
+    },
+    {
+      "csv_row": 15,
+      "repetition": 5,
+      "expanded": 21,
+      "error": ""
+    },
+    {
+      "csv_row": 16,
+      "repetition": 1,
+      "expanded": 21,
+      "error": ""
+    },
+    {
+      "csv_row": 17,
+      "repetition": 2,
+      "expanded": 21,
+      "error": ""
+    },
+    {
+      "csv_row": 18,
+      "repetition": 3,
+      "expanded": 21,
+      "error": ""
+    },
+    {
+      "csv_row": 19,
+      "repetition": 4,
+      "expanded": 21,
+      "error": ""
+    },
+    {
+      "csv_row": 20,
+      "repetition": 5,
+      "expanded": 21,
+      "error": ""
+    },
+    {
+      "csv_row": 21,
+      "repetition": 1,
+      "expanded": 17,
+      "error": ""
+    },
+    {
+      "csv_row": 22,
+      "repetition": 2,
+      "expanded": 17,
+      "error": ""
+    },
+    {
+      "csv_row": 23,
+      "repetition": 3,
+      "expanded": 17,
+      "error": ""
+    },
+    {
+      "csv_row": 24,
+      "repetition": 4,
+      "expanded": 17,
+      "error": ""
+    },
+    {
+      "csv_row": 25,
+      "repetition": 5,
+      "expanded": 17,
+      "error": ""
+    },
+    {
+      "csv_row": 26,
+      "repetition": 1,
+      "expanded": 17,
+      "error": ""
+    },
+    {
+      "csv_row": 27,
+      "repetition": 2,
+      "expanded": 17,
+      "error": ""
+    },
+    {
+      "csv_row": 28,
+      "repetition": 3,
+      "expanded": 17,
+      "error": ""
+    },
+    {
+      "csv_row": 29,
+      "repetition": 4,
+      "expanded": 17,
+      "error": ""
+    },
+    {
+      "csv_row": 30,
+      "repetition": 5,
+      "expanded": 17,
+      "error": ""
+    },
+    {
+      "csv_row": 31,
+      "repetition": 1,
+      "expanded": 27,
+      "error": ""
+    },
+    {
+      "csv_row": 32,
+      "repetition": 2,
+      "expanded": 27,
+      "error": ""
+    },
+    {
+      "csv_row": 33,
+      "repetition": 3,
+      "expanded": 27,
+      "error": ""
+    },
+    {
+      "csv_row": 34,
+      "repetition": 4,
+      "expanded": 27,
+      "error": ""
+    },
+    {
+      "csv_row": 35,
+      "repetition": 5,
+      "expanded": 27,
+      "error": ""
+    },
+    {
+      "csv_row": 36,
+      "repetition": 1,
+      "expanded": 27,
+      "error": ""
+    },
+    {
+      "csv_row": 37,
+      "repetition": 2,
+      "expanded": 27,
+      "error": ""
+    },
+    {
+      "csv_row": 38,
+      "repetition": 3,
+      "expanded": 27,
+      "error": ""
+    },
+    {
+      "csv_row": 39,
+      "repetition": 4,
+      "expanded": 27,
+      "error": ""
+    },
+    {
+      "csv_row": 40,
+      "repetition": 5,
+      "expanded": 27,
+      "error": ""
+    },
+    {
+      "csv_row": 41,
+      "repetition": 1,
+      "expanded": 26,
+      "error": ""
+    },
+    {
+      "csv_row": 42,
+      "repetition": 2,
+      "expanded": 26,
+      "error": ""
+    },
+    {
+      "csv_row": 43,
+      "repetition": 3,
+      "expanded": 26,
+      "error": ""
+    },
+    {
+      "csv_row": 44,
+      "repetition": 4,
+      "expanded": 26,
+      "error": ""
+    },
+    {
+      "csv_row": 45,
+      "repetition": 5,
+      "expanded": 26,
+      "error": ""
+    },
+    {
+      "csv_row": 46,
+      "repetition": 1,
+      "expanded": 27,
+      "error": ""
+    },
+    {
+      "csv_row": 47,
+      "repetition": 2,
+      "expanded": 27,
+      "error": ""
+    },
+    {
+      "csv_row": 48,
+      "repetition": 3,
+      "expanded": 27,
+      "error": ""
+    },
+    {
+      "csv_row": 49,
+      "repetition": 4,
+      "expanded": 27,
+      "error": ""
+    },
+    {
+      "csv_row": 50,
+      "repetition": 5,
+      "expanded": 27,
+      "error": ""
+    },
+    {
+      "csv_row": 51,
+      "repetition": 1,
+      "expanded": 26,
+      "error": ""
+    },
+    {
+      "csv_row": 52,
+      "repetition": 2,
+      "expanded": 26,
+      "error": ""
+    },
+    {
+      "csv_row": 53,
+      "repetition": 3,
+      "expanded": 26,
+      "error": ""
+    },
+    {
+      "csv_row": 54,
+      "repetition": 4,
+      "expanded": 26,
+      "error": ""
+    },
+    {
+      "csv_row": 55,
+      "repetition": 5,
+      "expanded": 26,
+      "error": ""
+    },
+    {
+      "csv_row": 56,
+      "repetition": 1,
+      "expanded": 26,
+      "error": ""
+    },
+    {
+      "csv_row": 57,
+      "repetition": 2,
+      "expanded": 26,
+      "error": ""
+    },
+    {
+      "csv_row": 58,
+      "repetition": 3,
+      "expanded": 26,
+      "error": ""
+    },
+    {
+      "csv_row": 59,
+      "repetition": 4,
+      "expanded": 26,
+      "error": ""
+    },
+    {
+      "csv_row": 60,
+      "repetition": 5,
+      "expanded": 26,
+      "error": ""
+    },
+    {
+      "csv_row": 61,
+      "repetition": 1,
+      "expanded": 55,
+      "error": ""
+    },
+    {
+      "csv_row": 62,
+      "repetition": 2,
+      "expanded": 55,
+      "error": ""
+    },
+    {
+      "csv_row": 63,
+      "repetition": 3,
+      "expanded": 55,
+      "error": ""
+    },
+    {
+      "csv_row": 64,
+      "repetition": 4,
+      "expanded": 55,
+      "error": ""
+    },
+    {
+      "csv_row": 65,
+      "repetition": 5,
+      "expanded": 55,
+      "error": ""
+    },
+    {
+      "csv_row": 66,
+      "repetition": 1,
+      "expanded": 56,
+      "error": ""
+    },
+    {
+      "csv_row": 67,
+      "repetition": 2,
+      "expanded": 56,
+      "error": ""
+    },
+    {
+      "csv_row": 68,
+      "repetition": 3,
+      "expanded": 56,
+      "error": ""
+    },
+    {
+      "csv_row": 69,
+      "repetition": 4,
+      "expanded": 56,
+      "error": ""
+    },
+    {
+      "csv_row": 70,
+      "repetition": 5,
+      "expanded": 56,
+      "error": ""
+    },
+    {
+      "csv_row": 71,
+      "repetition": 1,
+      "expanded": 53,
+      "error": ""
+    },
+    {
+      "csv_row": 72,
+      "repetition": 2,
+      "expanded": 53,
+      "error": ""
+    },
+    {
+      "csv_row": 73,
+      "repetition": 3,
+      "expanded": 53,
+      "error": ""
+    },
+    {
+      "csv_row": 74,
+      "repetition": 4,
+      "expanded": 53,
+      "error": ""
+    },
+    {
+      "csv_row": 75,
+      "repetition": 5,
+      "expanded": 53,
+      "error": ""
+    },
+    {
+      "csv_row": 76,
+      "repetition": 1,
+      "expanded": 55,
+      "error": ""
+    },
+    {
+      "csv_row": 77,
+      "repetition": 2,
+      "expanded": 55,
+      "error": ""
+    },
+    {
+      "csv_row": 78,
+      "repetition": 3,
+      "expanded": 55,
+      "error": ""
+    },
+    {
+      "csv_row": 79,
+      "repetition": 4,
+      "expanded": 55,
+      "error": ""
+    },
+    {
+      "csv_row": 80,
+      "repetition": 5,
+      "expanded": 55,
+      "error": ""
+    },
+    {
+      "csv_row": 81,
+      "repetition": 1,
+      "expanded": 82,
+      "error": ""
+    },
+    {
+      "csv_row": 82,
+      "repetition": 2,
+      "expanded": 82,
+      "error": ""
+    },
+    {
+      "csv_row": 83,
+      "repetition": 3,
+      "expanded": 82,
+      "error": ""
+    },
+    {
+      "csv_row": 84,
+      "repetition": 4,
+      "expanded": 82,
+      "error": ""
+    },
+    {
+      "csv_row": 85,
+      "repetition": 5,
+      "expanded": 82,
+      "error": ""
+    },
+    {
+      "csv_row": 86,
+      "repetition": 1,
+      "expanded": 83,
+      "error": ""
+    },
+    {
+      "csv_row": 87,
+      "repetition": 2,
+      "expanded": 83,
+      "error": ""
+    },
+    {
+      "csv_row": 88,
+      "repetition": 3,
+      "expanded": 83,
+      "error": ""
+    },
+    {
+      "csv_row": 89,
+      "repetition": 4,
+      "expanded": 83,
+      "error": ""
+    },
+    {
+      "csv_row": 90,
+      "repetition": 5,
+      "expanded": 83,
+      "error": ""
+    }
+  ]
+}

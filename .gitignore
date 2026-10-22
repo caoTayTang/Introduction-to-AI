@@ -1,0 +1,30 @@
+.venv/
+__pycache__/
+*.py[cod]
+.ruff_cache/
+.pytest_cache/
+.DS_Store
+.env
+.env.*
+
+# Generated local runs and previews. Publish selected evidence under docs/.
+/results/
+/pipes_problem/maps/played/
+/pipes_problem/artifacts/
+/tmp/
+/output/
+/slides/build/
+*.aux
+*.log
+*.nav
+*.out
+*.snm
+*.toc
+*.synctex.gz
+
+# Original reference work stays local, outside this submission's source.
+/sudoku_problem/
+/chess_ranger_problem/
+/BTL1.pdf
+/REVIEW.md
+/LEGACY_README.md

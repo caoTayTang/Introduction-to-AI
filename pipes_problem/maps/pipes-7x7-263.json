@@ -1,0 +1,13 @@
+{
+  "size": 7,
+  "source": [3, 3],
+  "tiles": [
+    ["S", "ES", "SW", "W", "W", "NES", "NE"],
+    ["N", "ESW", "NESW", "E", "N", "EW", "E"],
+    ["NW", "NS", "NEW", "NE", "NSW", "ESW", "E"],
+    ["E", "SW", "NSW", "NESW", "ESW", "NS", "W"],
+    ["E", "NEW", "N", "NS", "ESW", "NSW", "NE"],
+    ["SW", "NE", "NES", "SW", "EW", "EW", "NS"],
+    ["NE", "E", "SW", "W", "E", "S", "W"]
+  ]
+}

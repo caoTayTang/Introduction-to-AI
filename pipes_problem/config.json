@@ -1,0 +1,6 @@
+{
+  "version": 1,
+  "startup_map": "maps/pipes-5x5-261.json",
+  "animation_ms": 260,
+  "playback_steps_per_second": 8
+}

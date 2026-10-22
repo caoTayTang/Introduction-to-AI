@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "maps": [
+    "maps/*.json"
+  ],
+  "algorithms": [
+    "dfs",
+    "greedy_best_first"
+  ],
+  "repetitions": 5,
+  "time_limit_seconds": 30,
+  "max_expansions": 200000,
+  "output_directory": "../results"
+}

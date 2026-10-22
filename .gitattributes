@@ -1,0 +1,12 @@
+* text=auto
+*.py text eol=lf
+*.md text eol=lf
+*.csv text eol=lf
+*.tex text eol=lf
+*.yml text eol=lf
+*.pdf binary
+*.png binary
+*.ttf binary
+
+# Preserve the bundled third-party license verbatim.
+pipes_problem/assets/OFL.txt -whitespace

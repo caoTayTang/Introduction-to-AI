@@ -1,0 +1,10 @@
+{
+  "size": 4,
+  "source": [2, 2],
+  "tiles": [
+    ["E", "ES", "SW", "N"],
+    ["NW", "SW", "NEW", "ES"],
+    ["N", "W", "EW", "N"],
+    ["SW", "ESW", "NSW", "NE"]
+  ]
+}
