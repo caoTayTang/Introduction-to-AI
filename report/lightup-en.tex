@@ -1,0 +1,309 @@
+% Light Up section of the report — \input from main-vi.tex / main-en.tex.
+\section{Problem 2: Light Up (Akari)}
+
+\subsection{Studying the assignment and the rules}
+
+We studied Light Up (also known as Akari) at
+\url{https://www.puzzle-light-up.com/}, part of the same Logic Puzzles family as
+Pipes. The rules, distilled by playing:
+
+\begin{itemize}
+\item The board holds \emph{white cells}, \emph{unnumbered black walls} and
+\emph{numbered walls} (0--4). The task: place bulbs on white cells.
+\item Each bulb shines in the four orthogonal directions until blocked by a wall
+or the edge; a bulb's own cell counts as lit.
+\item \textbf{Constraint 1}: every white cell must be illuminated.
+\item \textbf{Constraint 2}: no two bulbs may see each other (same row/column
+with no wall in between).
+\item \textbf{Constraint 3}: a wall numbered $k$ must have exactly $k$
+orthogonally adjacent bulbs.
+\end{itemize}
+
+Compared with Pipes, this problem adds a \emph{cost} axis: the original game's
+solutions are unique (or nearly so), but the general problem admits placements
+with different bulb counts. We gave the heuristic solver an optimization goal:
+\textbf{A* returns a minimum-bulb solution}, while DFS returns the first solution
+it finds. This difference is central to interpreting the measurements.
+
+\subsection{Search problem formulation}
+
+Let $W$ be the number of white cells. The single most impactful representation
+decision: a state is a \textbf{$W$-bit integer bitmask} where bit $i$ means
+white cell $i$ holds a bulb. Placing bulbs, checking conflicts and computing
+illumination become integer operations:
+
+\begin{table}[h]
+\centering\small
+\begin{tabular}{@{}p{.20\textwidth}p{.74\textwidth}@{}}
+\toprule
+Component & Definition in this implementation\\
+\midrule
+Input & Board rows: \code{None} (white), $-1$ (wall), $0..4$ (numbered wall)\\
+State & Set of bulb cells, encoded as a $W$-bit bitmask\\
+Initial state & Empty set (mask 0)\\
+Action & Place a bulb on an eligible white cell\\
+Transition & Set the cell's bit; reject successors that break rules or reachability\\
+Goal test & All white cells lit, all clues exact, no bulb conflicts\\
+Cost & One per placed bulb (A*'s objective)\\
+Solution & A goal bulb set plus its placement order (path)\\
+\bottomrule
+\end{tabular}
+\caption{Search formulation for Light Up.}
+\end{table}
+
+Both solvers \textbf{branch on the first unlit white cell in row-major order}:
+only currently-legal bulbs that would illuminate that cell are considered. This
+gives the assignment space a tree structure (one parent per state), prevents
+duplicates naturally, and is \emph{identical for both solvers}, keeping the
+comparison fair. Before accepting a successor, the shared \code{feasible} check
+verifies: no line-of-sight conflict, no overfilled clue, every clue still able
+to reach its count with legal adjacent cells, and no unlit cell left without a
+possible legal illuminator. All are sound --- they only discard states that
+cannot reach a goal.
+
+\subsection{Blind search: Depth-First Search}
+
+DFS keeps a LIFO stack of masks plus a visited set. The branching order
+(``first unlit cell, row-major'') uses no heuristic information:
+
+\begin{lstlisting}
+DFS(puzzle, limits):
+  push mask 0 onto the stack
+  while stack is not empty:
+    if budget exhausted: return TIMEOUT / NODE_LIMIT / MEMORY_LIMIT
+    state = stack.pop()
+    if state in visited: continue;  mark visited
+    if GOAL(state): return SOLVED(state)
+    cell = FIRST_UNLIT_CELL(state)        # row-major policy
+    for c in legal bulbs illuminating cell:
+      child = state | bit(c)
+      if FEASIBLE(child): push child
+  return UNSOLVABLE
+\end{lstlisting}
+
+DFS is complete on this finite space with sound pruning, but its \emph{first
+solution is not minimum-cost}. Worst-case time is $O(2^W)$ states; memory holds
+the visited set and the stack, also exponential in the worst case. Time, node
+and memory limits end with statuses \emph{distinct} from UNSOLVABLE --- a TIMEOUT
+run is not evidence of unsolvability.
+
+\subsection{Heuristic search: A* with an admissible lower bound}
+
+A* explores by $f(n) = g(n) + h(n)$ with $g(n)$ = bulbs placed (unit cost), a
+min-heap frontier and a \code{best\_g} table that discards rediscoveries at no
+better cost. The heuristic is the maximum of three lower bounds on the bulbs
+still needed:
+
+\[
+h(n) = \max\left\{
+\left\lceil \tfrac{D}{G_{\max}} \right\rceil,\;
+\max_w d_w,\;
+\left\lceil \tfrac{\sum_w d_w}{H_{\max}} \right\rceil
+\right\}
+\]
+
+where $D$ = remaining dark cells, $G_{\max}$ = the most dark cells any single
+legal bulb could light right now, $d_w$ = numbered wall $w$'s deficit (bulbs
+still owed), and $H_{\max}$ = the most wall adjacencies one legal bulb could
+satisfy simultaneously. Each component lower-bounds the remaining bulbs: one
+bulb lights at most $G_{\max}$ cells; wall $w$ still needs at least $d_w$ bulbs;
+the total deficit $\sum d_w$ needs at least
+$\lceil \sum d_w / H_{\max}\rceil$ bulbs. The maximum of lower bounds is a lower
+bound, so $h$ is \textbf{admissible}; with unit costs and a completed search,
+A* returns a \textbf{minimum-bulb} solution.
+
+\begin{lstlisting}
+ASTAR(puzzle, limits):
+  push (f = h(0), g = 0, mask 0) into a min-heap
+  best_g = {0: 0}
+  while heap is not empty:
+    if budget exhausted: return TIMEOUT / NODE_LIMIT / MEMORY_LIMIT
+    pop state with minimum f
+    if GOAL(state): return SOLVED(state)
+    for c in legal bulbs illuminating FIRST_UNLIT_CELL(state):
+      child = state | bit(c)
+      if FEASIBLE(child) and g+1 < best_g.get(child, inf):
+        best_g[child] = g + 1
+        push (g + 1 + h(child), g + 1, child)
+  return UNSOLVABLE
+\end{lstlisting}
+
+The price: the heap holds the \emph{entire frontier}, the \code{best\_g} table
+holds every discovered state, and each expansion recomputes three bounds over
+large bitmasks. This is exactly where the measured time and memory gaps come
+from.
+
+\subsection{Implementation and visual demo}
+
+The implementation lives in \code{light\_up\_problem}, preserving the upstream
+layout: \code{core/} (board model, rules, JSON), \code{algorithms/search.py}
+(both bitmask solvers), \code{generator/} (seeded boards), \code{benchmark/}
+(measurement CLI), \code{ui/app.py} (pygame + pygame\_gui game), and
+\code{worker.py} (spawn-safe solver process). The demo interface offers:
+
+\begin{itemize}
+\item \textbf{Manual play}: click to place or remove a bulb; lit cells are
+highlighted, conflicts outlined in red, numbered walls show their current count.
+\item \textbf{Step-by-step search demo}: pick DFS or A*, then Run / Pause / Step
+/ Stop. Sampled \code{SearchEvent}s stream to the UI showing the current bulb
+set, the focused cell, and expanded/generated/frontier counters. \emph{Play
+solution} replays the returned placements one by one.
+\item \textbf{Compare DFS and A*}: runs both solvers on the current puzzle and
+shows time, node counts and bulb counts side by side.
+\end{itemize}
+
+\subsection{Creating inputs}
+
+Boards are generated deterministically from a seed by
+\code{generator/generate.py}: build a cyclic \emph{witness} (one bulb per row
+and column), propose walls only away from witness bulbs, derive clue values from
+adjacent witness bulbs, and keep a wall only if the witness remains valid. The
+witness is verified with the same \code{is\_goal\_state} used during play but is
+\emph{not} stored in the player-facing board. Twelve samples cover all 4 sizes
+(7, 10, 14, 25) $\times$ 3 difficulties (easy/normal/hard, target wall densities
+16\%/10.5\%/5.5\% of board area). Puzzles serialize as JSON in the
+\code{lightup-puzzle-v1} format via \code{save\_puzzle}/\code{load\_puzzle} or
+\code{-{}-puzzle-json}. Two limits are stated openly: difficulty labels are
+structural (wall density), not calibrated against solve times; and solution
+uniqueness is not checked.
+
+\subsection{Experimental results: time and memory}
+
+\textbf{Protocol.} Linux x86\_64 (kernel 6.8), Python 3.13.14 --- the same
+machine as the Pipes tables. Twelve sample inputs (4 sizes $\times$ 3
+difficulties), 3 repeats per algorithm, 30-second timeout, 500{,}000-node limit,
+512 MB estimated-memory limit. Time is the solver's own \code{perf\_counter}
+measurement; memory is the \code{tracemalloc} peak around the solver call. All
+72 runs are stored at \code{docs/benchmarks/2026-10-25-lightup.csv}; the table
+below reports medians of the 3 repeats. The 30-second budget is \emph{our
+experimental design choice} (the assignment brief mandates no time limit),
+shared by both algorithms; for the seven inputs where A* exceeded it, we reran
+A* once with a 600-second budget (20$\times$) --- Table~\ref{tab:lightup-ext-en}
+shows whether those runs finish, so TIMEOUT is not declared merely because the
+budget was small.
+
+\begin{table}[h]
+\centering\small
+\begin{tabular}{@{}lllrrrr@{}}
+\toprule
+Input & Algorithm & Result & Time (s) & Memory (KiB) & Nodes & Bulbs\\
+\midrule
+akari-7-easy & DFS    & SOLVED  & 0.0258  & 18.0   & 8    & 7\\
+(7$\times$7, seed 70097) & A* & SOLVED & 0.2729 & 36.5 & 70 & 7\\
+\midrule
+akari-7-normal & DFS  & SOLVED  & 0.0161  & 20.0   & 9    & 8\\
+(7$\times$7, seed 70194) & A* & SOLVED & 0.2355 & 63.2 & 153 & \textbf{7}\\
+\midrule
+akari-7-hard & DFS    & SOLVED  & 0.0271  & 23.9   & 7    & 6\\
+(7$\times$7, seed 70291) & A* & SOLVED & 6.7745 & 977.8 & 3164 & 6\\
+\midrule
+akari-10-easy & DFS   & SOLVED  & 0.5491  & 78.3   & 248  & 11\\
+(10$\times$10, seed 100097) & A* & SOLVED & 3.4994 & 184.6 & 618 & \textbf{10}\\
+\midrule
+akari-10-normal & DFS & SOLVED  & 0.0567  & 47.3   & 13   & 12\\
+(10$\times$10, seed 100194) & A* & SOLVED & 26.6845 & 1697.7 & 5464 & \textbf{9}\\
+\midrule
+akari-10-hard & DFS   & SOLVED  & 0.0776  & 51.9   & 12   & 11\\
+(10$\times$10, seed 100291) & A* & TIMEOUT & 30.0 & 3621.3 & 2401 & ---\\
+\midrule
+akari-14-easy & DFS   & SOLVED  & 0.3751  & 93.1   & 17   & 16\\
+(14$\times$14, seed 140097) & A* & TIMEOUT & 30.1 & 750.9 & 347 & ---\\
+\midrule
+akari-14-normal & DFS & SOLVED  & 0.4228  & 101.5  & 15   & 14\\
+(14$\times$14, seed 140194) & A* & TIMEOUT & 30.1 & 459.8 & 228 & ---\\
+\midrule
+akari-14-hard & DFS   & SOLVED  & 0.3539  & 112.5  & 17   & 16\\
+(14$\times$14, seed 140291) & A* & TIMEOUT & 30.0 & 1189.1 & 363 & ---\\
+\midrule
+akari-25-easy & DFS   & SOLVED  & 6.6833  & 553.1  & 33   & 31\\
+(25$\times$25, seed 250097) & A* & TIMEOUT & 30.3 & 483.1 & 17 & ---\\
+\midrule
+akari-25-normal & DFS & SOLVED  & 9.7177  & 691.5  & 35   & 34\\
+(25$\times$25, seed 250194) & A* & TIMEOUT & 30.1 & 590.0 & 15 & ---\\
+\midrule
+akari-25-hard & DFS   & SOLVED  & 8.0858  & 824.8  & 33   & 32\\
+(25$\times$25, seed 250291) & A* & TIMEOUT & 30.4 & 833.0 & 37 & ---\\
+\bottomrule
+\end{tabular}
+\caption{Light Up --- time, memory, expanded nodes and bulbs per input (median
+of 3 runs, measured 25 October 2026, shared 30-second budget). ``Bulbs'' is
+\code{solution\_cost}; ``---'' marks runs that hit the limit without concluding.
+All 72 runs are stored at \code{docs/benchmarks/2026-10-25-lightup.csv}.}
+\label{tab:lightup-per-input-en}
+\end{table}
+
+\begin{table}[h]
+\centering\small
+\begin{tabular}{@{}lrrr@{}}
+\toprule
+Input & Time (s) & Memory (KiB) & Expanded nodes\\
+\midrule
+akari-10-hard (seed 100291)   & 600.0 & 72{,}003 & 151{,}546\\
+akari-14-easy (seed 140097)   & 600.0 & 16{,}405 & 19{,}638\\
+akari-14-normal (seed 140194) & 600.0 & 16{,}120 & 8{,}634\\
+akari-14-hard (seed 140291)   & 600.0 & 31{,}244 & 9{,}477\\
+akari-25-easy (seed 250097)   & 600.0 & 1{,}868  & 523\\
+akari-25-normal (seed 250194) & 601.8 & 2{,}649  & 425\\
+akari-25-hard (seed 250291)   & 600.2 & 9{,}121  & 1{,}359\\
+\bottomrule
+\end{tabular}
+\caption{Light Up --- A* alone rerun with an extended 600-second budget (one
+run per input) on the seven inputs that exceeded 30 s in
+Table~\ref{tab:lightup-per-input-en}. \textbf{All seven runs still TIMEOUT.}
+Raw data: \code{docs/benchmarks/2026-10-25-lightup-ext.csv}.}
+\label{tab:lightup-ext-en}
+\end{table}
+
+\textbf{Interpreting the results.}
+
+\begin{itemize}
+\item \textbf{DFS solves all 12/12 inputs}, expanding very few nodes (7--35 on
+most boards; 248 on 10-easy). The ``first unlit cell'' policy walks each branch
+through the cells in order, and the shared \code{feasible} pruning rejects
+conflicting bulbs early; on clue-rich boards it almost never backtracks ---
+final nodes are only ~1.3$\times$ the bulb count. Time still grows with size
+(0.02\,s at 7$\times$7 to 6.7--9.7\,s at 25$\times$25) mostly due to bitmask and
+feasibility work over $W\approx500$--$600$ white cells, not node count.
+\item \textbf{A* completes only 5/12, but every A* solution is minimum-bulb.}
+On the five inputs both solvers finished, DFS matched the optimum twice
+(7-easy: 7 bulbs; 7-hard: 6) and exceeded it on the other three --- most clearly
+on 10-normal: DFS used 12 bulbs where A* proved 9 suffice (33\% more).
+\item \textbf{A* is 9--250$\times$ slower than DFS} where it finishes (0.27 vs
+0.026\,s; 26.7 vs 0.057\,s). Three cost sources: (i) the heap keeps the whole
+frontier instead of one branch; (ii) every expansion recomputes three lower
+bounds over bitmasks; (iii) the \code{best\_g} table fights rediscovery. A*'s
+node counts are also far higher (70--5464 vs 7--13): $f$-ordering makes A*
+process states DFS would never generate.
+\item \textbf{Memory: A* uses 2--40$\times$ more than DFS} where it finishes,
+peaking at 3621\,KiB on 10-hard before TIMEOUT --- the frontier grows exactly as
+theory predicts. Notably at 25$\times$25 A*'s memory (483--833\,KiB) stays below
+DFS's (553--825\,KiB): A* expands so slowly (15--37 nodes in 30 s, nearly a
+second per expansion on ~500-bit masks) that it never accumulates a large
+frontier, while DFS runs deep for 6--10 seconds with an accumulated visited set.
+\item \textbf{TIMEOUT is not unsolvability --- and not an artifact of a
+too-small 30-second budget.} We reran A* on all seven inputs with a 600-second
+budget (Table~\ref{tab:lightup-ext-en}): \emph{all seven still failed to
+finish}. On 10-hard alone, A* expanded 151,546 states and retained a
+$\sim$70 MiB traced peak within 600 seconds while the frontier kept growing;
+on the 25$\times$25 boards the per-expansion cost ($\sim$1--2 s over $\sim$500
+bitmasks) means ten minutes reach only 425--1,359 states. TIMEOUT is therefore
+a genuine resource-exhaustion outcome matching A*'s theoretical exponential
+behavior; no run ended UNSOLVABLE (every board has a generator witness).
+\end{itemize}
+
+A note on reading the 26.68 s A* figure on 10-normal: all three repeats gave
+25.4--28.0 s with \emph{exactly} 5,464 expanded nodes (the search is
+deterministic), so this is real solve time, not measurement noise. A*'s
+per-node cost on 10$\times$10 boards is a stable $\approx$5 ms (10-easy: 3.5 s
+for 618 nodes); 10-normal is slow simply because it must expand $\approx$8.8$
+\times$ more nodes --- fewer clues than 10-easy weaken the lower bounds and
+widen the frontier. It sits just under the 30-second budget, while 10-hard
+(fewer clues still) crosses it.
+
+\subsection{Limitations}
+
+Difficulty labels come from wall density rather than measured solve times, and
+solution uniqueness is unverified, so no board is claimed to have a unique
+solution. Memory is the tracemalloc peak of Python allocations, not process RSS.
+Stronger lower bounds (for example, matching-based coverage of dark cells) were
+not attempted --- such bounds could push A* further before the timeout ceiling.

@@ -1,0 +1,292 @@
+% Pipes section of the report — \input from main-vi.tex / main-en.tex.
+\section{Problem 1: Pipes}
+
+\subsection{Studying the assignment and the rules}
+
+We studied Pipes by playing the original game at \url{https://www.puzzle-pipes.com/}
+and observing its behavior. Playing first, we distilled the rules as follows:
+
+\begin{itemize}
+\item The board is an $m\times m$ grid of pipe tiles. Each tile has a \emph{fixed
+shape} (straight, elbow, T-junction, cross, end) and a changeable \emph{orientation};
+rotating a tile is the only move.
+\item Each shape exposes ports on some of its North--East--South--West sides.
+Rotation never changes the port count, only directions.
+\item Goal: every open port must meet a reciprocal open port on the adjacent tile
+(no port leaves the board, no dangling port), all tiles must form \textbf{one
+connected} network, and the network must contain \textbf{no cycle}.
+\item The water source shown in the original game is a visualization anchor: once
+the network is complete, water flows from the source to every tile. Moving the
+source does not change the set of valid boards.
+\end{itemize}
+
+In textbook terms this is a single-agent, deterministic, fully observable,
+discrete, static task. It is a \emph{satisfaction} problem: any valid board is a
+solution; minimizing manual rotations is not required (the original game does not
+score rotations either).
+
+\subsection{Search problem formulation}
+
+Let $n=m^2$ and number the tiles in row-major order. Tile $i$ has a fixed shape
+and an orientation domain $R_i$ of its distinct rotations. We formulate:
+
+\begin{table}[h]
+\centering\small
+\begin{tabular}{@{}p{.20\textwidth}p{.74\textwidth}@{}}
+\toprule
+Component & Definition in this implementation\\
+\midrule
+Input & Saved scrambled board (shapes + orientations), grid size, source\\
+State & Prefix $s=(a_0,\dots,a_{k-1})$ of assigned orientations\\
+Initial state & Empty prefix $()$, with all tile shapes known\\
+Action & Assign a boundary-valid orientation to tile $k$ (row-major order)\\
+Transition & $s' = s + (a_k)$, accepted only after all feasibility checks\\
+Goal test & $k=n$ and the complete board satisfies every rule\\
+Cost & 1 per assignment; neither solver ranks by cost\\
+Solution & One complete valid orientation tuple\\
+\bottomrule
+\end{tabular}
+\caption{Search formulation for Pipes.}
+\end{table}
+
+One subtlety: a \emph{solver step} assigns an absolute orientation to the next
+tile, while a \emph{player step} rotates a tile by 90 degrees. One assignment can
+equal zero to three clicks. Both solvers share the assignment model, which makes
+their comparison fair. The saved scrambled board only supplies the domains $R_i$
+and the rotation order; search always starts from the empty prefix and never
+reads a stored solution.
+
+\subsection{Search space and shared pruning}
+
+The number of complete assignments before boundary checks is
+$U=\prod_i |R_i| \le 4^n$: elbows, T-junctions and ends have 4 distinct rotations,
+straights 2, crosses 1. A typical 4$\times$4 board has
+$U = 4^{16} \approx 4.29\times10^9$; the 7$\times$7 upper bound is
+$4^{49} \approx 3.17\times10^{29}$. The assignment tree has depth $n$, branching
+factor at most 4, and \textbf{every prefix has exactly one parent} (fixed
+assignment order), so no closed set is needed for duplicate detection.
+
+Orientations pointing off the board are removed up front. For each candidate
+child, the shared \code{compatible()} routine applies three sound pruning layers
+to both solvers:
+
+\begin{enumerate}
+\item \textbf{Match assigned neighbors}: every unassigned domain $R_i$ is
+restricted to orientations matching the assigned neighbors' ports (present and
+absent alike). An empty domain rejects the branch.
+\item \textbf{Cycle rejection}: if assigned tiles already form a cycle, reject
+(disjoint-set check).
+\item \textbf{Possible connectivity}: build an \emph{optimistic} graph over tiles
+--- an edge exists if some remaining orientation could open toward the other
+tile. If this graph cannot connect every tile, reject.
+\end{enumerate}
+
+At the root we check the port count: a tree over $n$ vertices has exactly $n-1$
+edges $=2(n-1)$ ports, and rotation preserves the count, so a different total
+proves unsolvability immediately (the converse does not hold). All three layers
+only remove states that cannot lead to a solution, so completeness is preserved.
+DFS is therefore uninformed in its \emph{traversal order} but is a
+constraint-pruned search, not a blind rotation enumerator.
+
+\subsection{Blind search: Depth-First Search}
+
+DFS follows the first feasible child until it reaches a goal or a dead end, then
+backtracks. Rotations are enumerated in each tile's saved-orientation order ---
+no heuristic information is used:
+
+\begin{lstlisting}
+SEARCH_DFS(input):
+  build boundary-valid domains R_i
+  if root feasibility fails: return UNSOLVABLE
+  return VISIT(())
+
+VISIT(s):
+  if budget exhausted: return LIMIT_REACHED
+  count one expansion
+  if GOAL(s): return SOLVED(s)
+  for a in boundary-valid rotations of tile |s|:
+    child = s + (a)
+    if FEASIBLE(child):           # 3 pruning layers
+      r = VISIT(child)
+      if r is SOLVED or LIMIT_REACHED: return r
+  return UNSOLVABLE
+\end{lstlisting}
+
+The prefix space is finite and acyclic and the pruning is sound, so DFS is
+\emph{complete} given enough resources. The first solution found does not
+minimize assignments. Worst-case time is exponential in $n$; memory keeps the
+current path plus pending alternatives --- this Python implementation stores
+copied prefix tuples and generator frames, about $O(n^2)$ along one branch.
+
+\subsection{Heuristic search: Greedy Best-First}
+
+Greedy always pops from a min-heap the state with the fewest \emph{remaining
+choices}:
+\[
+h(s) = \sum_{i \text{ unassigned}} \log_2 |D_i(s)|, \qquad
+\text{priority}(s) = (h(s),\ -\text{depth}(s),\ \text{insertion order})
+\]
+where $D_i(s)$ is the boundary-valid domain of tile $i$ after matching assigned
+neighbors. The sum is the logarithm of the product of remaining domain sizes:
+domains $(1,2,4)$ give $h=0+1+2=3$, while $(1,1,2)$ give $h=1$ --- state B is
+less ``free'' and is preferred. We chose this heuristic because (i) it is cheap,
+reusing domains already computed during pruning, and (ii) every solution at the
+same depth needs exactly $n$ assignments, so $n-k$ distinguishes nothing, while
+the log-domain sum prioritizes branches that narrow fastest. $h$ is
+\emph{not admissible} --- it measures remaining uncertainty, not a cost bound ---
+and no $g$ term is used.
+
+\begin{lstlisting}
+SEARCH_GREEDY(input):
+  build boundary-valid domains; root feasibility check
+  push () into min-priority queue with priority 0
+  while queue is not empty:
+    if budget exhausted: return LIMIT_REACHED
+    s = pop minimum-priority state;  count one expansion
+    if GOAL(s): return SOLVED(s)
+    for a in boundary-valid rotations of tile |s|:
+      child = s + (a);  D = FEASIBLE(child)
+      if D exists: push child with (h(child), -|child|, serial)
+  return UNSOLVABLE
+\end{lstlisting}
+
+On the finite, acyclic prefix space, keeping all feasible candidates makes Greedy
+complete given enough resources; but Greedy must hold its frontier in the heap,
+so memory can grow exponentially.
+
+\subsection{Implementation and visual demo}
+
+The implementation lives in the \code{pipes\_problem} package: \code{model.py}
+(rules, validation, board generation), \code{search.py} (both solvers, pruning,
+timing and memory), \code{app.py} (pygame interface), \code{worker.py} (isolated
+measurement process), \code{benchmark.py} (batch runner). The demo interface
+offers:
+
+\begin{itemize}
+\item Manual play: click to rotate (Shift for counterclockwise), right-click to
+lock, Undo/Reset; connected pipes carry animated blue water from the source.
+\item \textbf{Step-by-step search demo}: pick DFS or Greedy, then \emph{Run /
+Pause / Next / Speed}. Each event is labeled: \emph{expand} (DFS visits / Greedy
+pops a prefix), \emph{assign} (DFS chooses a child), \emph{queue} (Greedy pushes),
+\emph{reject} (a pruned orientation --- tile outlined in red with the reason),
+\emph{backtrack}. \emph{Next} separates expansion from successor generation.
+\item \emph{Show solution} replays the final assignment on its own; the board
+returns to its saved state before a run. \emph{Unsolvable} and \emph{limit
+reached} are distinct, explicit messages.
+\end{itemize}
+
+\subsection{Creating inputs}
+
+Inputs are produced by the project generator (not transcribed from the web):
+nine default maps covering sizes $4\times4, 5\times5, 7\times7$ with seeds
+261--263, stored as compact JSON (\code{size}, \code{source}, \code{tiles}) with
+the filename as the input ID. In addition, \code{maps/custom/cdai.json} is a
+hand-edited \emph{unsolvable} map used to check messaging and exhausted-space
+behavior. Runtime generation by \code{-{}-size}/\code{-{}-seed} is also
+available. These are the team's own examples (not official website puzzle IDs),
+and the generator never stores a solution in the map file.
+
+\subsection{Experimental results: time and memory}
+
+\textbf{Protocol.} Runs were executed on Linux x86\_64 (kernel 6.8), Python
+3.13.14, pygame-ce 2.5.8. Both algorithms receive the \emph{same} nine maps, the
+same row-major tile order, the same pruning, a 30-second limit and 200{,}000
+expansions per run. Each (map, algorithm) pair runs 5 times: time is a headless
+\code{perf\_counter} solve (no drawing); memory is the peak Python allocation
+measured by \code{tracemalloc} in a separate replay, combined only when both
+passes agree on status, returned board and expansion count. The full 90-run
+dataset is stored at \code{docs/benchmarks/2026-10-25-pipes.csv}; the tables
+below report medians per input.
+
+\begin{table}[h]
+\centering\small
+\begin{tabular}{@{}llrrr@{}}
+\toprule
+Input & Algorithm & Solved/runs & Time (ms) & Memory (KiB)\\
+\midrule
+pipes-4x4-261 & DFS    & 5/5 & 3.380  & 26.836\\
+              & Greedy & 5/5 & 2.866  & 11.695\\
+\midrule
+pipes-4x4-262 & DFS    & 5/5 & 3.047  & 27.078\\
+              & Greedy & 5/5 & 3.386  & 12.359\\
+\midrule
+pipes-4x4-263 & DFS    & 5/5 & 3.149  & 26.984\\
+              & Greedy & 5/5 & 2.741  & 12.500\\
+\midrule
+pipes-5x5-261 & DFS    & 5/5 & 5.352  & 53.203\\
+              & Greedy & 5/5 & 7.094  & 19.500\\
+\midrule
+pipes-5x5-262 & DFS    & 5/5 & 5.906  & 53.344\\
+              & Greedy & 5/5 & 5.882  & 19.219\\
+\midrule
+pipes-5x5-263 & DFS    & 5/5 & 4.564  & 53.297\\
+              & Greedy & 5/5 & 5.712  & 19.219\\
+\midrule
+pipes-7x7-261 & DFS    & 5/5 & 23.247 & 145.852\\
+              & Greedy & 5/5 & 27.049 & 27.594\\
+\midrule
+pipes-7x7-262 & DFS    & 5/5 & 21.938 & 145.930\\
+              & Greedy & 5/5 & 26.669 & 27.070\\
+\midrule
+pipes-7x7-263 & DFS    & 5/5 & 40.785 & 145.852\\
+              & Greedy & 5/5 & 38.246 & 29.094\\
+\bottomrule
+\end{tabular}
+\caption{Pipes --- time and peak memory per input (median of 5 runs, measured
+25 October 2026). All 90/90 runs are \emph{solved}. Source:
+\code{docs/benchmarks/2026-10-25-pipes.csv}.}
+\label{tab:pipes-per-input-en}
+\end{table}
+
+\begin{table}[h]
+\centering\small
+\begin{tabular}{@{}llrrr@{}}
+\toprule
+Size & Algorithm & Solved/runs & Median time (ms) & Median memory (KiB)\\
+\midrule
+$4\times4$ & DFS    & 15/15 & 3.149  & 26.984\\
+           & Greedy & 15/15 & 3.097  & 12.359\\
+$5\times5$ & DFS    & 15/15 & 5.261  & 53.297\\
+           & Greedy & 15/15 & 6.157  & 19.219\\
+$7\times7$ & DFS    & 15/15 & 24.469 & 145.852\\
+           & Greedy & 15/15 & 31.695 & 27.594\\
+\bottomrule
+\end{tabular}
+\caption{Pipes --- summary by board size (3 maps $\times$ 5 runs per figure).}
+\label{tab:pipes-summary-en}
+\end{table}
+
+\textbf{Interpreting the results.}
+
+\begin{itemize}
+\item \textbf{Time grows quickly with size} (3--5 ms at 4$\times$4 to 22--41 ms
+at 7$\times$7): variables grow from 16 to 49 and each successor's feasibility
+check touches more assigned neighbors, matching the exponential prediction for
+the search space.
+\item \textbf{DFS is faster than Greedy at 5$\times$5 and 2 of 3 maps at
+7$\times$7.} On easy inputs the pruning already steers DFS's first branch almost
+straight to a solution; the priority queue only adds heap push/pop and $h$
+computation without changing traversal much. This shows that a heuristic is
+\emph{not free}: its bookkeeping cost must be repaid by ranking quality.
+\item \textbf{On the hardest map (pipes-7x7-263) Greedy wins} (38.2 vs 40.8 ms):
+this map forces real backtracking, and ranking by ``fewest remaining choices''
+explores tight branches first, saving some wasted probing. The margin is small
+(5\%) but appears exactly where heuristics should help.
+\item \textbf{Memory: Greedy uses 4--5$\times$ less than DFS} (12--29 KiB vs
+27--146 KiB). Counter to the textbook worry about Greedy's exponential frontier,
+the tracemalloc figure reflects this implementation's actual Python allocations:
+DFS copies a prefix tuple and holds a generator frame per recursion level, while
+Greedy's frontier stays tiny on easy inputs because pruning discards almost
+everything. On much harder inputs Greedy's frontier could still balloon ---
+further experiments would be needed to confirm.
+\item \textbf{All 90 runs solved} within limits; no run hit the 30-second or
+200k-expansion budget on this input set.
+\end{itemize}
+
+\subsection{Limitations}
+
+The default input set is quite easy under the current pruning, so neither solver
+is pushed to its limits; any ``winner'' claim holds only for this kind of input.
+We have not yet ablated the pruning layers separately, added many unsolvable
+maps, or tried an MRV heuristic. These limitations are recorded in
+\code{docs/pipes-analysis.md} as future work.

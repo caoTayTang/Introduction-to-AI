@@ -1,63 +1,6 @@
-\documentclass[aspectratio=169,11pt]{beamer}
-\usepackage{amsmath,amssymb,booktabs,tikz,listings}
-\usetikzlibrary{arrows.meta,positioning,calc}
-\definecolor{blue}{HTML}{285BC2}
-\definecolor{water}{HTML}{258BD2}
-\definecolor{ink}{HTML}{25282D}
-\definecolor{muted}{HTML}{646E7B}
-\definecolor{red}{HTML}{BA463A}
-\setbeamercolor{normal text}{fg=ink,bg=white}
-\setbeamercolor{structure}{fg=blue}
-\setbeamercolor{frametitle}{fg=blue}
-\setbeamercolor{itemize item}{fg=blue}
-\setbeamerfont{frametitle}{size=\Large,series=\bfseries}
-\setbeamerfont{title}{size=\Huge,series=\bfseries}
-\setbeamertemplate{navigation symbols}{}
-\setbeamertemplate{itemize item}{\small$\bullet$}
-\setbeamertemplate{footline}{\hfill\color{muted}\scriptsize\insertframenumber\,/\,\inserttotalframenumber\hspace{7mm}\vspace{4mm}}
-\setbeamersize{text margin left=9mm,text margin right=9mm}
-\lstset{basicstyle=\ttfamily\footnotesize,columns=fullflexible,
-  keepspaces=true,showstringspaces=false,keywordstyle=\color{blue},
-  morekeywords={if,return,for,in,while,push,pop,then,else},aboveskip=5pt}
-\newcommand{\src}[1]{\vfill{\tiny\color{muted}#1}}
-\newcommand{\pipearm}[3]{\draw[draw=#3,line width=3pt,line cap=round] (#1,#2) -- ++(0.43,0);}
-% A tile's integer mask uses N=1, E=2, S=4, W=8.
-\newcommand{\tile}[4]{%
-  \begin{scope}[shift={(#1,#2)}]
-    \draw[gray!25] (-.5,-.5) rectangle (.5,.5);
-    \foreach \bit/\dx/\dy in {1/0/0.5,2/0.5/0,4/0/-0.5,8/-0.5/0}{%
-      \pgfmathtruncatemacro{\hasport}{mod(floor(#3/\bit),2)}
-      \ifnum\hasport=1
-        \draw[#4,line width=3.6pt,line cap=round] (0,0)--(\dx,\dy);
-      \fi}
-  \end{scope}}
-\newcommand{\board}[2]{%
-  \foreach \mask [count=\idx from 0] in {#1}{%
-    \pgfmathtruncatemacro{\col}{mod(\idx,4)}
-    \pgfmathtruncatemacro{\row}{-floor(\idx/4)}
-    \tile{\col}{\row}{\mask}{#2}}
-  \fill[white] (2,-2) circle (.15);
-  \fill[blue] (2,-2) circle (.11);}
+% Pipes frames — English version, \input from slides/main-en.tex.
+% \tile/\board/\src are defined in the main-en.tex preamble.
 
-\begin{document}
-
-% 1
-\begin{frame}[plain]
-\begin{columns}[c,onlytextwidth]
-\column{.60\textwidth}
-{\color{blue}\Huge\bfseries Pipes}\par\vspace{4mm}
-{\Large Search for a connected network}\par\vspace{7mm}
-Introduction to Artificial Intelligence\par\vspace{3mm}
-\small Depth-first search and Greedy Best-First\par
-\column{.34\textwidth}
-\centering
-\begin{tikzpicture}[scale=.79]
-\board{2,12,2,12,4,5,4,5,7,11,15,13,3,8,1,1}{water}
-\end{tikzpicture}
-\end{columns}
-\end{frame}
-
-% 2
 \begin{frame}{Goal: one connected, acyclic network}
 \begin{columns}[c,onlytextwidth]
 \column{.38\textwidth}\centering
@@ -80,7 +23,6 @@ G\text{ is a tree} \quad\Longrightarrow\quad |E|=n-1
 \src{Rules: puzzle-pipes.com. Goal validation: model.py and search.py.}
 \end{frame}
 
-% 3
 \begin{frame}{Problem formulation}
 \small
 \begin{tabular}{@{}p{.23\textwidth}p{.70\textwidth}@{}}
@@ -100,7 +42,6 @@ Cost & Unit assignment cost, unused by either ranking \\
 \src{Implemented state model: Search in pipes\_problem/search.py.}
 \end{frame}
 
-% 4
 \begin{frame}{Legal successors}
 The next tile has a fixed shape. Search chooses its orientation.
 \vspace{5mm}
@@ -125,7 +66,6 @@ The next tile has a fixed shape. Search chooses its orientation.
 \src{Example is schematic. Orientation filtering: boundary\_domains() and compatible().}
 \end{frame}
 
-% 5
 \begin{frame}{Search space}
 \begin{columns}[T,onlytextwidth]
 \column{.48\textwidth}
@@ -156,7 +96,6 @@ For the shipped 4\,$\times$\,4 example: $U=268{,}435{,}456$.\par
 \src{Count derived from distinct rotations in pipes-4x4-261.json.}
 \end{frame}
 
-% 6
 \begin{frame}{Shared pruning}
 \centering
 \begin{tikzpicture}[node distance=5mm,
@@ -176,7 +115,6 @@ Possible connectivity is necessary but does not prove a solution exists.
 \src{Pruning implementation: Search.compatible(). Full reasoning: docs/pipes-analysis.md.}
 \end{frame}
 
-% 7
 \begin{frame}[fragile]{Depth-first search}
 \begin{columns}[T,onlytextwidth]
 \column{.60\textwidth}
@@ -209,7 +147,6 @@ Worst-case exploration remains exponential.
 \src{Simplified pseudocode matches dfs(). Root feasibility precedes VISIT. Cancellation is external.}
 \end{frame}
 
-% 8
 \begin{frame}{Greedy's heuristic: remaining choices}
 \[
 h(s)=\sum_{i\text{ unassigned}}\log_2 |D_i(s)|
@@ -232,7 +169,6 @@ It provides no admissibility or minimum-click guarantee.
 \src{Hypothetical domain example. Exact priority: (h, -depth, insertion order) in greedy().}
 \end{frame}
 
-% 9
 \begin{frame}[fragile]{Greedy Best-First search}
 \begin{columns}[T,onlytextwidth]
 \column{.61\textwidth}
@@ -266,7 +202,6 @@ Memory can grow exponentially.
 \src{Root feasibility precedes the queue. Priority uses h alone. The unique root starts at zero.}
 \end{frame}
 
-% 10
 \begin{frame}{Evaluation protocol}
 \begin{itemize}
 \item Same nine saved maps for both algorithms.
@@ -288,32 +223,27 @@ Limits: 30 seconds of solver computation and 200,000 expansions.
 \src{Runner: benchmark.py. Measurement: measure() and worker.py.}
 \end{frame}
 
-% 11
 \begin{frame}{Baseline results}
 \input{results-table.tex}
 \vspace{3mm}
 \small Median over 15 successful runs per size and algorithm.\par
 Each group contains three distinct inputs with five timing repeats.\par\vspace{3mm}
-These inputs require little search under shared pruning. Queue overhead can outweigh
-the benefit of Greedy's ranking. This small sample supports no general winner.
-\src{Measured 22 October 2026. Raw rows and environment: docs/benchmarks/.}
+DFS wins at 5$\times$5 and two of three 7$\times$7 maps; Greedy takes the hardest
+map (38.2 vs 40.8\,ms) and holds 4--5$\times$ less traced memory.\par
+These inputs are easy under shared pruning; no general winner is claimed.
+\src{Measured 25 October 2026, Linux, Python 3.13. Raw rows: docs/benchmarks/2026-10-25-pipes.csv.}
 \end{frame}
 
-% 12
 \begin{frame}{Scope and next experiments}
 \begin{itemize}
 \item Compare harder maps and proven-unsolvable inputs.
 \item Measure the effect of shared pruning separately.
 \item Keep UNSOLVABLE distinct from LIMIT or CANCELLED.
-\item Complete the second puzzle and final course report.
+\item Try alternative heuristics (MRV) and broader input sets.
 \end{itemize}
 \vspace{5mm}
 \small\textbf{References}\par\vspace{2mm}
 Pipes rules: \url{https://www.puzzle-pipes.com/}\par
 Russell and Norvig, \emph{Artificial Intelligence: A Modern Approach},
-4th ed., Chapters 3 and 6. \url{https://aima.cs.berkeley.edu/}\par\vspace{2mm}
-Implementation and derived analysis: this repository's
-\texttt{search.py}, \texttt{model.py} and \texttt{docs/pipes-analysis.md}.
+4th ed., Chapters 3 and 6. \url{https://aima.cs.berkeley.edu/}
 \end{frame}
-
-\end{document}

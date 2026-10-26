@@ -6,7 +6,7 @@ permissions:
   contents: read
 
 jobs:
-  pipes:
+  puzzles:
     runs-on: ubuntu-latest
     env:
       SDL_VIDEODRIVER: dummy
@@ -21,6 +21,8 @@ jobs:
       - name: Install locked dependencies
         run: uv sync --frozen
       - name: Lint
-        run: uv run ruff check main.py pipes_problem
-      - name: Test
+        run: uv run ruff check main.py pipes_problem light_up_problem
+      - name: Test Pipes
         run: uv run python -m unittest discover -s pipes_problem -t .
+      - name: Test Light Up
+        run: uv run python -m unittest discover -s light_up_problem -t .

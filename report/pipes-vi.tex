@@ -1,0 +1,292 @@
+% Phần Pipes của báo cáo — được \input từ main-vi.tex / main-en.tex.
+\section{Bài toán 1: Pipes}
+
+\subsection{Tìm hiểu đề bài và luật chơi}
+
+Nhóm tìm hiểu Pipes qua việc chơi trực tiếp trên \url{https://www.puzzle-pipes.com/}
+và quan sát hành vi của game gốc. Sau quá trình chơi thử, nhóm tóm tắt luật như sau:
+
+\begin{itemize}
+\item Bàn chơi $m\times m$ gồm các ô ống. Mỗi ô có \emph{hình dạng cố định}
+(ống thẳng, khuỷu, chữ T, chữ thập, đầu cụt) và một \emph{định hướng} (hướng xoay)
+có thể thay đổi; xoay là tác động duy nhất của người chơi.
+\item Mỗi hình dạng có một tập cổng ở các phía Bắc--Đông--Nam--Tây. Xoay ô không
+đổi số cổng, chỉ đổi hướng.
+\item Mục tiêu: xoay sao cho \textbf{mọi} cổng mở đều gặp cổng mở tương ứng của ô
+kề (không cổng nào chìa ra ngoài biên, không cổng nào \emph{dangling}), toàn bộ
+các ô nối thành \textbf{một} mạng liên thông và mạng \textbf{không chứa chu trình}.
+\item Nguồn nước (ô đánh dấu trên game gốc) chỉ để trực quan hóa: khi mạng hoàn
+chỉnh, nước chảy từ nguồn tới mọi ô. Đổi vị trí nguồn không làm đổi tập các bàn
+hợp lệ.
+\end{itemize}
+
+Nhìn theo phân loại của giáo trình, đây là bài toán \emph{một agent, tất định,
+quan sát được toàn phần, rời rạc, tĩnh}. Đây là bài toán \emph{thỏa mãn}
+(satisfaction): mọi bàn hợp lệ đều là lời giải, bài toán không yêu cầu tối ưu số
+lần xoay. Trò chơi gốc cũng không tính điểm theo số bước xoay.
+
+\subsection{Phát biểu bài toán tìm kiếm}
+
+Gọi $n = m^2$, đánh số các ô theo thứ tự hàng--cột (row-major). Ô $i$ có hình dạng
+cố định và miền định hướng $R_i$ gồm các xoay phân biệt của hình dạng đó. Nhóm
+phát biểu bài toán như sau:
+
+\begin{table}[h]
+\centering\small
+\begin{tabular}{@{}p{.20\textwidth}p{.74\textwidth}@{}}
+\toprule
+Thành phần & Định nghĩa trong cài đặt\\
+\midrule
+Input & Bàn chơi đã xáo trộn (hình dạng + định hướng lưu sẵn), kích thước, nguồn\\
+Trạng thái & Tiền tố $s=(a_0,\dots,a_{k-1})$ các định hướng đã gán\\
+Trạng thái đầu & Tiền tố rỗng $()$, biết trước toàn bộ hình dạng\\
+Tác động & Gán một định hướng hợp lệ biên cho ô $k$ (ô kế tiếp theo row-major)\\
+Chuyển tiếp & $s' = s + (a_k)$, chỉ nhận khi qua hết các kiểm tra khả thi\\
+Kiểm tra đích & $k=n$ và bàn hoàn chỉnh thỏa mọi luật\\
+Chi phí & 1 mỗi phép gán; không giải thuật nào dùng chi phí để xếp hạng\\
+Lời giải & Một bộ định hướng đầy đủ hợp lệ\\
+\bottomrule
+\end{tabular}
+\caption{Phát biểu bài toán tìm kiếm cho Pipes.}
+\end{table}
+
+Điểm cần nhấn: \emph{một bước của giải thuật} là gán \textbf{tuyệt đối} một định
+hướng cho ô kế tiếp, khác với \emph{một bước của người chơi} là xoay 90 độ. Một
+phép gán có thể tương ứng 0--3 lần xoay. Cả hai giải thuật dùng cùng mô hình gán,
+nên việc so sánh chúng là công bằng. Nhóm cũng tách bạch trạng thái tìm kiếm
+(tiền tố rỗng) với bàn xáo trộn lưu trong file input: bàn xáo trộn cung cấp miền
+$R_i$ và thứ tự duyệt các xoay, còn tìm kiếm luôn bắt đầu từ tiền tố rỗng, không
+dựa vào đáp án của generator.
+
+\subsection{Không gian tìm kiếm và cắt tỉa dùng chung}
+
+Số cách gán đầy đủ (chưa xét biên) là $U=\prod_i |R_i| \le 4^n$: ô khuỷu/T/đầu
+cụt có 4 xoay phân biệt, ống thẳng có 2, ô chữ thập có 1. Với bàn 4$\times$4 điển
+hình $U = 4^{16} \approx 4{,}29\times10^9$; với 7$\times$7 cận trên là
+$4^{49} \approx 3{,}17\times10^{29}$. Cây gán có độ sâu $n$, hệ số phân nhánh tối
+đa 4, và \textbf{mỗi tiền tố có đúng một cha} (thứ tự gán cố định), nên không cần
+bảng closed để chống lặp trạng thái.
+
+Trước khi tìm kiếm, các định hướng chìa cổng ra ngoài biên bị loại. Với mỗi ứng
+viên con, hàm \code{compatible()} dùng chung cho cả hai giải thuật thực hiện ba
+lớp cắt tỉa hợp lệ (sound):
+
+\begin{enumerate}
+\item \textbf{Khớp với láng giềng đã gán}: mỗi miền $R_i$ chưa gán bị thu hẹp chỉ
+giữ định hướng khớp cổng của các ô đã gán (cả cổng có lẫn cổng \emph{không} có).
+Miền nào rỗng thì chặn nhánh.
+\item \textbf{Chặn chu trình}: nếu các ô đã gán tạo chu trình thì loại (dùng cấu
+trúc disjoint-set).
+\item \textbf{Kết nối khả dĩ}: dựng đồ thị \emph{lạc quan} giữa các ô — có cạnh
+nếu hai ô \emph{có thể} mở cổng về phía nhau với một định hướng còn lại nào đó.
+Nếu đồ thị này không liên thông thì không thể có mạng hoàn chỉnh, chặn nhánh.
+\end{enumerate}
+
+Tại gốc, kiểm tra nhanh $2(n-1)$ cổng: mạng cây trên $n$ đỉnh có đúng $n-1$ cạnh
+$= 2(n-1)$ cổng; xoay không đổi số cổng nên tổng sai chứng tỏ vô nghiệm ngay từ
+đầu. Điều ngược lại không đúng (đủ cổng chưa chắc có nghiệm). Cả ba lớp cắt tỉa
+đều chỉ loại trạng thái \emph{không thể} dẫn tới nghiệm nên không mất tính đầy đủ.
+DFS do đó là giải thuật mù về \emph{thứ tự duyệt}, nhưng vẫn là DFS có cắt tỉa
+ràng buộc chứ không phải máy đếm xoay vét cạn.
+
+\subsection{Giải thuật tìm kiếm mù: Depth-First Search}
+
+DFS đi sâu theo nhánh con khả thi đầu tiên cho đến khi gặp đích hoặc bế tắc rồi
+quay lui. Thứ tự duyệt các xoay là thứ tự lưu sẵn của từng ô — hoàn toàn không
+dùng thông tin heuristic:
+
+\begin{lstlisting}
+SEARCH_DFS(input):
+  build boundary-valid domains R_i
+  if root feasibility fails: return UNSOLVABLE
+  return VISIT(())
+
+VISIT(s):
+  if budget exhausted: return LIMIT_REACHED
+  count one expansion
+  if GOAL(s): return SOLVED(s)
+  for a in boundary-valid rotations of tile |s|:
+    child = s + (a)
+    if FEASIBLE(child):           # 3 pruning layers
+      r = VISIT(child)
+      if r is SOLVED or LIMIT_REACHED: return r
+  return UNSOLVABLE
+\end{lstlisting}
+
+Với không gian hữu hạn, cây có chu kỳ bị cắt bởi cấu trúc tiền tố, và cắt tỉa là
+hợp lệ nên DFS \emph{đầy đủ} nếu đủ tài nguyên. Lời giải đầu tiên tìm được không
+đảm bảo tối ưu số phép gán. Độ phức tạp thời gian xấu nhất là hàm mũ theo $n$;
+về bộ nhớ, DFS giữ đường hiện hành và các nhánh chưa xét — cài đặt Python giữ bản
+sao tiền tố và khung generator cho mỗi mức, khoảng $O(n^2)$ trên một nhánh.
+
+\subsection{Giải thuật heuristic: Greedy Best-First}
+
+Greedy luôn pop khỏi hàng ưu tiên (min-heap) trạng thái có ít \emph{lựa chọn còn
+lại} nhất:
+\[
+h(s) = \sum_{i \text{ chưa gán}} \log_2 |D_i(s)|, \qquad
+\text{priority}(s) = (h(s),\ -\text{depth}(s),\ \text{insertion order})
+\]
+với $D_i(s)$ là miền biên-hợp-lệ của ô $i$ sau khi khớp với các láng giềng đã
+gán. Tổng là logarit của tích các miền còn lại: ví dụ miền $(1,2,4)$ cho
+$h=0+1+2=3$, còn $(1,1,2)$ cho $h=1$ — trạng thái B ít ``tự do'' hơn và được ưu
+tiên. Nhóm chọn heuristic này vì: (i) nó rẻ, chỉ cần miền đã tính trong bước cắt
+tỉa; (ii) mọi lời giải ở cùng độ sâu đều cần đúng $n$ phép gán nên $n-k$ không
+phân biệt được gì, còn tổng log-miền ưu tiên nhánh ít phân nhánh nhất. $h$ ở đây
+\emph{không admissible} — nó đo độ bất định còn lại, không phải cận dưới chi phí;
+và không dùng thành phần $g$.
+
+\begin{lstlisting}
+SEARCH_GREEDY(input):
+  build boundary-valid domains; root feasibility check
+  push () into min-priority queue with priority 0
+  while queue is not empty:
+    if budget exhausted: return LIMIT_REACHED
+    s = pop minimum-priority state;  count one expansion
+    if GOAL(s): return SOLVED(s)
+    for a in boundary-valid rotations of tile |s|:
+      child = s + (a);  D = FEASIBLE(child)
+      if D exists: push child with (h(child), -|child|, serial)
+  return UNSOLVABLE
+\end{lstlisting}
+
+Trên không gian tiền tố hữu hạn, vô chu kỳ, việc giữ toàn bộ ứng viên khả thi
+làm Greedy đầy đủ nếu đủ tài nguyên; nhưng Greedy phải giữ cả frontier trong heap
+nên bộ nhớ có thể tăng hàm mũ.
+
+\subsection{Hiện thực và demo trực quan}
+
+Cài đặt nằm trong package \code{pipes\_problem}: \code{model.py} (luật, validation,
+sinh bàn), \code{search.py} (hai giải thuật, cắt tỉa, đo thời gian/bộ nhớ),
+\code{app.py} (giao diện pygame), \code{worker.py} (process đo độc lập),
+\code{benchmark.py} (chạy batch). Giao diện demo:
+
+\begin{itemize}
+\item Chơi thủ công: click xoay (Shift để ngược chiều), right-click khóa ô,
+Undo/Reset; ống có nước hiển thị màu xanh chảy từ nguồn.
+\item \textbf{Demo tìm kiếm từng bước}: chọn DFS hoặc Greedy rồi \emph{Run /
+Pause / Next / Speed}. Mỗi sự kiện hiển thị đúng loại: \emph{expand} (thăm/pop
+tiền tố), \emph{assign} (DFS chọn con), \emph{queue} (Greedy push), \emph{reject}
+(định hướng bị cắt tỉa — ô viền đỏ kèm lý do), \emph{backtrack}. Nút \emph{Next}
+cho phép phân biệt \emph{mở rộng trạng thái} với \emph{sinh successor}.
+\item \emph{Show solution} phát lại riêng bộ gán cuối cùng; bàn trở về trạng thái
+đầu trước khi chạy. Kết quả \emph{vô nghiệm} và \emph{chạm giới hạn} hiển thị
+thành hai thông báo phân biệt.
+\end{itemize}
+
+\subsection{Tạo input}
+
+Nhóm sinh input bằng generator của project (không chép tay từ web): 9 map mặc
+định gồm 3 kích thước $4\times4, 5\times5, 7\times7$ $\times$ 3 seed 261--263,
+định dạng JSON gọn (\code{size}, \code{source}, \code{tiles}), tên file là định
+danh input. Ngoài ra có \code{maps/custom/cdai.json} — map được hiệu chỉnh tay
+thành \emph{vô nghiệm} để kiểm tra thông báo và hành vi cạn không gian. Generator
+runtime cũng cho sinh map theo \code{-{}-size}/\code{-{}-seed}. Đây là input
+\emph{mẫu của nhóm} (không phải map chính thức của trang web) và generator không
+lưu nghiệm vào file map.
+
+\subsection{Kết quả thực nghiệm: thời gian và bộ nhớ}
+
+\textbf{Giao thức đo.} Chạy trên máy Linux x86\_64 (kernel 6.8), Python 3.13.14,
+pygame-ce 2.5.8. Cả hai giải thuật nhận \emph{cùng} 9 map, cùng thứ tự gán
+row-major, cùng bộ cắt tỉa, giới hạn 30 giây và 200{,}000 lần mở rộng mỗi lượt.
+Mỗi cặp (map, giải thuật) chạy 5 lần: thời gian là solve headless bằng
+\code{perf\_counter} (không vẽ hình); bộ nhớ là đỉnh cấp phát Python đo bằng
+\code{tracemalloc} trong một replay riêng, chỉ gộp khi hai lần cho cùng status,
+cùng bàn kết quả và cùng số lần mở rộng. Bảng số liệu đầy đủ (90 lượt) lưu tại
+\code{docs/benchmarks/2026-10-25-pipes.csv}; các bảng dưới là trung vị (median)
+theo từng input.
+
+\begin{table}[h]
+\centering\small
+\begin{tabular}{@{}llrrr@{}}
+\toprule
+Input & Giải thuật & Solved/lượt & Thời gian (ms) & Bộ nhớ (KiB)\\
+\midrule
+pipes-4x4-261 & DFS    & 5/5 & 3.380  & 26.836\\
+              & Greedy & 5/5 & 2.866  & 11.695\\
+\midrule
+pipes-4x4-262 & DFS    & 5/5 & 3.047  & 27.078\\
+              & Greedy & 5/5 & 3.386  & 12.359\\
+\midrule
+pipes-4x4-263 & DFS    & 5/5 & 3.149  & 26.984\\
+              & Greedy & 5/5 & 2.741  & 12.500\\
+\midrule
+pipes-5x5-261 & DFS    & 5/5 & 5.352  & 53.203\\
+              & Greedy & 5/5 & 7.094  & 19.500\\
+\midrule
+pipes-5x5-262 & DFS    & 5/5 & 5.906  & 53.344\\
+              & Greedy & 5/5 & 5.882  & 19.219\\
+\midrule
+pipes-5x5-263 & DFS    & 5/5 & 4.564  & 53.297\\
+              & Greedy & 5/5 & 5.712  & 19.219\\
+\midrule
+pipes-7x7-261 & DFS    & 5/5 & 23.247 & 145.852\\
+              & Greedy & 5/5 & 27.049 & 27.594\\
+\midrule
+pipes-7x7-262 & DFS    & 5/5 & 21.938 & 145.930\\
+              & Greedy & 5/5 & 26.669 & 27.070\\
+\midrule
+pipes-7x7-263 & DFS    & 5/5 & 40.785 & 145.852\\
+              & Greedy & 5/5 & 38.246 & 29.094\\
+\bottomrule
+\end{tabular}
+\caption{Pipes — thời gian và đỉnh bộ nhớ theo từng input (median 5 lượt, đo
+25/10/2026). Cả 90/90 lượt đều \emph{solved}. Nguồn:
+\code{docs/benchmarks/2026-10-25-pipes.csv}.}
+\label{tab:pipes-per-input}
+\end{table}
+
+\begin{table}[h]
+\centering\small
+\begin{tabular}{@{}llrrr@{}}
+\toprule
+Kích thước & Giải thuật & Solved/lượt & Median time (ms) & Median memory (KiB)\\
+\midrule
+$4\times4$ & DFS    & 15/15 & 3.149  & 26.984\\
+           & Greedy & 15/15 & 3.097  & 12.359\\
+$5\times5$ & DFS    & 15/15 & 5.261  & 53.297\\
+           & Greedy & 15/15 & 6.157  & 19.219\\
+$7\times7$ & DFS    & 15/15 & 24.469 & 145.852\\
+           & Greedy & 15/15 & 31.695 & 27.594\\
+\bottomrule
+\end{tabular}
+\caption{Pipes — tổng hợp theo kích thước (3 map $\times$ 5 lượt mỗi ô số liệu).}
+\label{tab:pipes-summary}
+\end{table}
+
+\textbf{Giải thích kết quả.}
+
+\begin{itemize}
+\item \textbf{Thời gian tăng nhanh theo kích thước} (3--5 ms ở 4$\times$4 lên
+22--41 ms ở 7$\times$7): số biến tăng từ 16 lên 49 và chi phí kiểm tra khả thi
+mỗi successor tăng theo số láng giềng đã gán, đúng dự đoán hàm mũ về không gian
+tìm kiếm.
+\item \textbf{DFS nhanh hơn Greedy ở 5$\times$5 và 2/3 map 7$\times$7.} Trên các
+input dễ, cắt tỉa đã khiến nhánh đầu tiên của DFS gần như thẳng tới nghiệm; hàng
+ưu tiên của Greedy lúc đó chỉ tạo thêm chi phí push/pop heap và tính $h$ mà không
+đổi thứ tự duyệt đáng kể. Đây là minh chứng cho việc heuristic \emph{không miễn
+phí}: chi phí cài đặt phải được bù bằng chất lượng xếp hạng.
+\item \textbf{Trên map khó nhất (pipes-7x7-263), Greedy nhanh hơn DFS}
+(38.2 so với 40.8 ms): map này buộc tìm kiếm phải lui vài nhánh thật; xếp hạng
+theo ``ít lựa chọn còn lại'' giúp nhánh gấp gáp (miền thu hẹp nhanh) được xét
+trước, tiết kiệm bớt phần dò thừa. Chênh lệch nhỏ (5\%) nhưng xuất hiện ở đúng
+loại input mà heuristic có giá trị.
+\item \textbf{Bộ nhớ: Greedy thấp hơn DFS 4--5 lần} (12--29 KiB so với
+27--146 KiB). Nghịch với suy đoán lý thuyết ``frontier của Greedy có thể hàm mũ'',
+số đo tracemalloc phản ánh \emph{cấp phát Python thực tế của cài đặt}: DFS giữ
+bản sao tiền tố cho từng mức đệ quy và khung generator treo (mỗi mức một tuple
+copy), trong khi Greedy trên input dễ chỉ giữ vài chục ứng viên do cắt tỉa gạt
+gần hết. Trên input khó hơn nhiều, frontier của Greedy vẫn có nguy cơ phình hàm
+mũ — cần thí nghiệm bổ sung để khẳng định.
+\item \textbf{Cả 90 lượt đều solved} trong giới hạn; không có run nào chạm 30 giây
+hay 200k expansions trên bộ input này.
+\end{itemize}
+
+\subsection{Hạn chế}
+
+Bộ input mặc định khá dễ với cắt tỉa hiện tại nên hai giải thuật chưa bị ép tới
+giới hạn; kết luận về ``kẻ thắng'' chỉ có giá trị trên loại input này. Nhóm chưa
+đo riêng đóng góp từng lớp cắt tỉa (ablation), chưa thêm đủ nhiều map vô nghiệm,
+và chưa thử heuristic MRV. Các hạn chế này được ghi nhận trong
+\code{docs/pipes-analysis.md} và là việc làm tiếp theo.

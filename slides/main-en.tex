@@ -1,0 +1,82 @@
+% BTL1 slides — English version. Build PDF: tectonic slides/main-en.tex
+\documentclass[aspectratio=169,11pt]{beamer}
+\usepackage{amsmath,amssymb,booktabs,tikz,listings}
+\usetikzlibrary{arrows.meta,positioning,calc}
+\definecolor{blue}{HTML}{285BC2}
+\definecolor{water}{HTML}{258BD2}
+\definecolor{ink}{HTML}{25282D}
+\definecolor{muted}{HTML}{646E7B}
+\definecolor{red}{HTML}{BA463A}
+\setbeamercolor{normal text}{fg=ink,bg=white}
+\setbeamercolor{structure}{fg=blue}
+\setbeamercolor{frametitle}{fg=blue}
+\setbeamercolor{itemize item}{fg=blue}
+\setbeamerfont{frametitle}{size=\Large,series=\bfseries}
+\setbeamerfont{title}{size=\Huge,series=\bfseries}
+\setbeamertemplate{navigation symbols}{}
+\setbeamertemplate{itemize item}{\small$\bullet$}
+\setbeamertemplate{footline}{\hfill\color{muted}\scriptsize\insertframenumber\,/\,\inserttotalframenumber\hspace{7mm}\vspace{4mm}}
+\setbeamersize{text margin left=9mm,text margin right=9mm}
+\lstset{basicstyle=\ttfamily\footnotesize,columns=fullflexible,
+  keepspaces=true,showstringspaces=false,keywordstyle=\color{blue},
+  morekeywords={if,return,for,in,while,push,pop,then,else},aboveskip=5pt}
+\newcommand{\src}[1]{\vfill{\tiny\color{muted}#1}}
+\newcommand{\pipearm}[3]{\draw[draw=#3,line width=3pt,line cap=round] (#1,#2) -- ++(0.43,0);}
+% A tile's integer mask uses N=1, E=2, S=4, W=8.
+\newcommand{\tile}[4]{%
+  \begin{scope}[shift={(#1,#2)}]
+    \draw[gray!25] (-.5,-.5) rectangle (.5,.5);
+    \foreach \bit/\dx/\dy in {1/0/0.5,2/0.5/0,4/0/-0.5,8/-0.5/0}{%
+      \pgfmathtruncatemacro{\hasport}{mod(floor(#3/\bit),2)}
+      \ifnum\hasport=1
+        \draw[#4,line width=3.6pt,line cap=round] (0,0)--(\dx,\dy);
+      \fi}
+  \end{scope}}
+\newcommand{\board}[2]{%
+  \foreach \mask [count=\idx from 0] in {#1}{%
+    \pgfmathtruncatemacro{\col}{mod(\idx,4)}
+    \pgfmathtruncatemacro{\row}{-floor(\idx/4)}
+    \tile{\col}{\row}{\mask}{#2}}
+  \fill[white] (2,-2) circle (.15);
+  \fill[blue] (2,-2) circle (.11);}
+
+\begin{document}
+
+% ---------- Title ----------
+\begin{frame}[plain]
+\begin{columns}[c,onlytextwidth]
+\column{.62\textwidth}
+{\color{blue}\Huge\bfseries Pipes \& Light Up}\par\vspace{4mm}
+{\Large Search algorithms for two logic puzzles}\par\vspace{7mm}
+Introduction to Artificial Intelligence --- Assignment 1 (HK1 2026--2027)\par\vspace{3mm}
+\small DFS (blind) + Greedy Best-First (Pipes)\quad$\cdot$\quad DFS (blind) + A* (Light Up)\par\vspace{2mm}
+\footnotesize [Group --- member names go here]
+\column{.33\textwidth}
+\centering
+\begin{tikzpicture}[scale=.62]
+\board{2,12,2,12,4,5,4,5,7,11,15,13,3,8,1,1}{water}
+\end{tikzpicture}
+\end{columns}
+\end{frame}
+
+\input{pipes-en}
+\input{lightup-en}
+
+% ---------- Closing ----------
+\begin{frame}{Summary}
+\begin{itemize}
+\item Two puzzles, four algorithms, one shared state-space formulation style.
+\item Every algorithm ships a step-by-step visual demo and was measured on the
+same inputs.
+\item DFS + sound pruning is fast and light on moderate inputs; heuristic search
+pays bookkeeping costs for better ordering (Greedy) or optimal cost (A*).
+\item Full data: \texttt{docs/benchmarks/2026-10-25-*.csv}.
+\end{itemize}
+\vspace{5mm}
+\small\textbf{References}\par\vspace{2mm}
+\url{https://www.puzzle-pipes.com/} $\cdot$ \url{https://www.puzzle-light-up.com/}\par
+Russell \& Norvig, \emph{Artificial Intelligence: A Modern Approach}, 4th ed.\par
+Implementation and analysis: \texttt{pipes\_problem/}, \texttt{light\_up\_problem/}, \texttt{docs/}.
+\end{frame}
+
+\end{document}

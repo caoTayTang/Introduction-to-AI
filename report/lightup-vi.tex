@@ -1,0 +1,305 @@
+% Phần Light Up của báo cáo — được \input từ main-vi.tex / main-en.tex.
+\section{Bài toán 2: Light Up (Akari)}
+
+\subsection{Tìm hiểu đề bài và luật chơi}
+
+Nhóm tìm hiểu Light Up (tên khác: Akari) qua trang
+\url{https://www.puzzle-light-up.com/}, cùng hệ bài toán Logic Puzzles với
+Pipes. Luật tóm tắt sau khi chơi thử:
+
+\begin{itemize}
+\item Bàn vuông gồm \emph{ô trắng}, \emph{tường đen không số} và \emph{tường đen
+có số} (0--4). Nhiệm vụ: đặt bóng đèn vào các ô trắng.
+\item Mỗi bóng chiếu sáng theo 4 hướng (lên--xuống--trái--phải) cho tới khi bị
+tường hoặc biên chặn; ô có bóng cũng được tính là sáng.
+\item \textbf{Ràng buộc 1}: mọi ô trắng phải được chiếu sáng.
+\item \textbf{Ràng buộc 2}: hai bóng không được chiếu thẳng vào nhau (trên cùng
+hàng/cột, không có tường ở giữa).
+\item \textbf{Ràng buộc 3}: tường số $k$ phải có đúng $k$ bóng kề trực tiếp
+(4 hướng).
+\end{itemize}
+
+So với Pipes, bài toán này có thêm trục \emph{chi phí}: trong game gốc lời giải
+là duy nhất (hoặc gần duy nhất), nhưng ở dạng tổng quát có thể có nhiều cách đặt
+đèn với số bóng khác nhau. Nhóm chọn mục tiêu tối ưu cho giải thuật heuristic:
+\textbf{A* trả về lời giải dùng ít bóng nhất}, trong khi DFS trả về lời giải đầu
+tiên tìm được. Đây là khác biệt quan trọng khi diễn giải số liệu thực nghiệm.
+
+\subsection{Phát biểu bài toán tìm kiếm}
+
+Gọi $W$ là số ô trắng. Quyết định biểu diễn trạng thái có ảnh hưởng lớn nhất đến
+hiệu năng: mỗi trạng thái là một \textbf{bitmask nguyên} $W$ bit, bit $i$ bật
+nghĩa ô trắng $i$ có bóng. Đặt bóng, kiểm tra xung đột, tính ô được chiếu đều
+trở thành phép toán trên số nguyên:
+
+\begin{table}[h]
+\centering\small
+\begin{tabular}{@{}p{.20\textwidth}p{.74\textwidth}@{}}
+\toprule
+Thành phần & Định nghĩa trong cài đặt\\
+\midrule
+Input & Bàn: \code{None} (trắng), $-1$ (tường), $0..4$ (tường số)\\
+Trạng thái & Tập ô có bóng, mã hóa bitmask $W$ bit\\
+Trạng thái đầu & Tập rỗng (mask 0)\\
+Tác động & Đặt bóng vào một ô trắng hợp lệ\\
+Chuyển tiếp & Bật bit của ô; loại successor vi phạm luật hoặc mất khả năng đạt\\
+Kiểm tra đích & Mọi ô trắng sáng, mọi tường số đúng, không xung đột bóng\\
+Chi phí & 1 mỗi bóng đặt vào (trục tối ưu của A*)\\
+Lời giải & Một tập bóng đạt đích + thứ tự đặt (path)\\
+\bottomrule
+\end{tabular}
+\caption{Phát biểu bài toán tìm kiếm cho Light Up.}
+\end{table}
+
+Cả hai giải thuật đều \textbf{rẽ nhánh theo ô trắng tối đầu tiên chưa được chiếu
+(theo thứ tự row-major)}: chỉ xét các bóng hợp lệ có thể chiếu ô đó. Quy tắc này
+làm không gian gán có cấu trúc cây (mỗi trạng thái một cha), chống lặp tự nhiên,
+và \emph{giống nhau cho cả hai giải thuật} nên phép so sánh là công bằng. Trước
+khi nhận một successor, hàm \code{feasible} dùng chung kiểm tra: không xung đột
+tầm nhìn, không tường số nào bị vượt; mọi tường số còn \emph{đủ} ô kề hợp lệ để
+đạt số cần; và không tồn tại ô tối nào \emph{không còn bóng hợp lệ nào chiếu
+được}. Đây đều là cắt tỉa hợp lệ — chỉ loại trạng thái không thể dẫn tới nghiệm.
+
+\subsection{Giải thuật tìm kiếm mù: Depth-First Search}
+
+DFS dùng ngăn xếp LIFO cho các bitmask chờ xét, kèm tập visited chống quay lại
+trạng thái đã thấy. Thứ tự rẽ nhánh là ``ô tối đầu tiên + thứ tự row-major'',
+hoàn toàn không dùng thông tin heuristic:
+
+\begin{lstlisting}
+DFS(puzzle, limits):
+  push mask 0 onto the stack
+  while stack is not empty:
+    if budget exhausted: return TIMEOUT / NODE_LIMIT / MEMORY_LIMIT
+    state = stack.pop()
+    if state in visited: continue;  mark visited
+    if GOAL(state): return SOLVED(state)
+    cell = FIRST_UNLIT_CELL(state)        # row-major policy
+    for c in legal bulbs illuminating cell:
+      child = state | bit(c)
+      if FEASIBLE(child): push child
+  return UNSOLVABLE
+\end{lstlisting}
+
+DFS đầy đủ trên không gian hữu hạn với cắt tỉa hợp lệ, nhưng \emph{lời giải đầu
+tiên không tối ưu} số bóng. Độ phức tạp xấu nhất $O(2^W)$ trạng thái; bộ nhớ giữ
+visited và ngăn xếp, cũng hàm mũ trong trường hợp xấu nhất. Giới hạn thời gian /
+số node / bộ nhớ ước tính đều trả về trạng thái kết thúc \emph{phân biệt} với
+UNSOLVABLE — một lượt TIMEOUT không phải bằng chứng vô nghiệm.
+
+\subsection{Giải thuật heuristic: A* với cận dưới admissible}
+
+A* duyệt theo $f(n) = g(n) + h(n)$ với $g(n)$ = số bóng đã đặt (chi phí đơn vị),
+hàng ưu tiên là min-heap, kèm bảng \code{best\_g} bỏ qua trạng thái được tái
+khám với chi phí không tốt hơn. Thành phần quyết định là heuristic:
+
+\[
+h(n) = \max\left\{
+\left\lceil \tfrac{D}{G_{\max}} \right\rceil,\;
+\max_w d_w,\;
+\left\lceil \tfrac{\sum_w d_w}{H_{\max}} \right\rceil
+\right\}
+\]
+
+với $D$ = số ô tối còn lại, $G_{\max}$ = số ô tối đa \emph{một} bóng hợp lệ chiếu
+được ở trạng thái hiện tại, $d_w$ = phần thiếu của tường số $w$ (số bóng còn phải
+đặt kề nó), $H_{\max}$ = số kề của một tường mà \emph{một} bóng hợp lệ có thể thỏa
+cùng lúc. Ba thành phần đều là \textbf{cận dưới} số bóng còn phải đặt: mỗi bóng
+chiếu tối đa $G_{\max}$ ô; mỗi tường thiếu $d_w$ cần ít nhất $d_w$ bóng; tổng phần
+thiếu $\sum d_w$ cần ít nhất $\lceil \sum d_w / H_{\max}\rceil$ bóng. max của các
+cận dưới vẫn là cận dưới, nên $h$ \textbf{admissible}; với chi phí đơn vị và tìm
+kiếm chạy hết, A\* trả về lời giải \textbf{tối ưu số bóng}.
+
+\begin{lstlisting}
+ASTAR(puzzle, limits):
+  push (f = h(0), g = 0, mask 0) into a min-heap
+  best_g = {0: 0}
+  while heap is not empty:
+    if budget exhausted: return TIMEOUT / NODE_LIMIT / MEMORY_LIMIT
+    pop state with minimum f
+    if GOAL(state): return SOLVED(state)
+    for c in legal bulbs illuminating FIRST_UNLIT_CELL(state):
+      child = state | bit(c)
+      if FEASIBLE(child) and g+1 < best_g.get(child, inf):
+        best_g[child] = g + 1
+        push (g + 1 + h(child), g + 1, child)
+  return UNSOLVABLE
+\end{lstlisting}
+
+Cái giá: heap phải giữ \emph{toàn bộ frontier}, bảng \code{best\_g} giữ mọi
+trạng thái đã thấy, và mỗi lần mở rộng phải tính lại ba cận dưới trên bitmask
+lớn. Đây chính là nguồn của chênh lệch thời gian và bộ nhớ thấy được trong thực
+nghiệm.
+
+\subsection{Hiện thực và demo trực quan}
+
+Cài đặt nằm trong package \code{light\_up\_problem}, giữ cấu trúc của project gốc:
+\code{core/} (mô hình bàn, luật, JSON), \code{algorithms/search.py} (hai giải
+thuật bitmask), \code{generator/} (sinh bàn theo seed), \code{benchmark/} (CLI
+đo lường), \code{ui/app.py} (game pygame + pygame\_gui), \code{worker.py}
+(process solver spawn-safe). Giao diện demo:
+
+\begin{itemize}
+\item \textbf{Chơi thủ công}: click đặt/bỏ bóng; ô được chiếu tô màu sáng, viền
+đỏ báo xung đột, tường số hiển thị số bóng kề hiện tại.
+\item \textbf{Demo tìm kiếm từng bước}: chọn DFS hoặc A*, nhấn Run/Pause/Step/
+Stop; các sự kiện tìm kiếm được stream về UI (đã lấy mẫu) hiển thị bộ bóng hiện
+tại, ô đang xét, bộ đếm expanded/generated/frontier. \emph{Play solution} phát
+lại từng bước đặt bóng của lời giải.
+\item \textbf{So sánh DFS và A*}: chạy cả hai giải thuật trên cùng bàn và hiển
+thị kết quả cạnh nhau (thời gian, node, số bóng).
+\end{itemize}
+
+\subsection{Tạo input}
+
+Bàn chơi được sinh xác định theo seed bởi \code{generator/generate.py}: xây
+\emph{witness} dạng hoán vị tuần hoàn (mỗi hàng/cột đúng một bóng), đề xuất tường
+chỉ ở nơi không phá witness, suy ra số trên tường từ các bóng kề witness, và chỉ
+giữ tường nếu witness vẫn là nghiệm hợp lệ. Witness được kiểm bằng chính hàm
+\code{is\_goal\_state} dùng khi chơi, nhưng \emph{không} lưu vào bàn đưa cho người
+chơi. Có 12 bộ sample phủ đủ 4 kích thước (7, 10, 14, 25) $\times$ 3 độ khó
+(easy/normal/hard, mật độ tường mục tiêu 16\%/10.5\%/5.5\% diện tích). Input JSON
+định dạng \code{lightup-puzzle-v1} xuất/nhập bằng \code{save\_puzzle}/
+\code{load\_puzzle} hoặc qua \code{-{}-puzzle-json}. Hai giới hạn nói rõ trong
+báo cáo: \emph{độ khó gán theo cấu trúc} (mật độ tường), chưa hiệu chuẩn theo
+thời gian giải; và \emph{tính duy nhất nghiệm chưa được kiểm tra}.
+
+\subsection{Kết quả thực nghiệm: thời gian và bộ nhớ}
+
+\textbf{Giao thức đo.} Máy Linux x86\_64 (kernel 6.8), Python 3.13.14 — cùng môi
+trường với bảng Pipes. 12 input sample (4 kích thước $\times$ 3 độ khó), mỗi giải
+thuật chạy 3 lượt, giới hạn 30 giây, 500{,}000 node, 512 MB bộ nhớ ước tính.
+Thời gian do solver tự đo bằng \code{perf\_counter}; bộ nhớ là đỉnh cấp phát
+Python qua \code{tracemalloc} bao quanh lời gọi solver. Toàn bộ 72 lượt nằm ở
+\code{docs/benchmarks/2026-10-25-lightup.csv}; bảng dưới là median 3 lượt. Giới
+hạn 30 giây là \emph{thiết kế thí nghiệm của nhóm} (đề bài không quy định giới
+hạn thời gian) để hai giải thuật dùng chung một ngân sách; riêng với 7 input mà
+A* vượt ngưỡng, nhóm chạy thêm A* một lượt với ngân sách 600 giây (gấp 20 lần)
+— Bảng~\ref{tab:lightup-ext} cho biết những lượt đó có kết thúc hay không,
+tránh đánh dấu TIMEOUT chỉ vì ngưỡng quá thấp.
+
+\begin{table}[h]
+\centering\small
+\begin{tabular}{@{}lllrrrr@{}}
+\toprule
+Input & Giải thuật & Kết quả & Thời gian (s) & Bộ nhớ (KiB) & Node & Bóng\\
+\midrule
+akari-7-easy & DFS    & SOLVED  & 0.0258  & 18.0   & 8    & 7\\
+(7$\times$7, seed 70097) & A* & SOLVED & 0.2729 & 36.5 & 70 & 7\\
+\midrule
+akari-7-normal & DFS  & SOLVED  & 0.0161  & 20.0   & 9    & 8\\
+(7$\times$7, seed 70194) & A* & SOLVED & 0.2355 & 63.2 & 153 & \textbf{7}\\
+\midrule
+akari-7-hard & DFS    & SOLVED  & 0.0271  & 23.9   & 7    & 6\\
+(7$\times$7, seed 70291) & A* & SOLVED & 6.7745 & 977.8 & 3164 & 6\\
+\midrule
+akari-10-easy & DFS   & SOLVED  & 0.5491  & 78.3   & 248  & 11\\
+(10$\times$10, seed 100097) & A* & SOLVED & 3.4994 & 184.6 & 618 & \textbf{10}\\
+\midrule
+akari-10-normal & DFS & SOLVED  & 0.0567  & 47.3   & 13   & 12\\
+(10$\times$10, seed 100194) & A* & SOLVED & 26.6845 & 1697.7 & 5464 & \textbf{9}\\
+\midrule
+akari-10-hard & DFS   & SOLVED  & 0.0776  & 51.9   & 12   & 11\\
+(10$\times$10, seed 100291) & A* & TIMEOUT & 30.0 & 3621.3 & 2401 & ---\\
+\midrule
+akari-14-easy & DFS   & SOLVED  & 0.3751  & 93.1   & 17   & 16\\
+(14$\times$14, seed 140097) & A* & TIMEOUT & 30.1 & 750.9 & 347 & ---\\
+\midrule
+akari-14-normal & DFS & SOLVED  & 0.4228  & 101.5  & 15   & 14\\
+(14$\times$14, seed 140194) & A* & TIMEOUT & 30.1 & 459.8 & 228 & ---\\
+\midrule
+akari-14-hard & DFS   & SOLVED  & 0.3539  & 112.5  & 17   & 16\\
+(14$\times$14, seed 140291) & A* & TIMEOUT & 30.0 & 1189.1 & 363 & ---\\
+\midrule
+akari-25-easy & DFS   & SOLVED  & 6.6833  & 553.1  & 33   & 31\\
+(25$\times$25, seed 250097) & A* & TIMEOUT & 30.3 & 483.1 & 17 & ---\\
+\midrule
+akari-25-normal & DFS & SOLVED  & 9.7177  & 691.5  & 35   & 34\\
+(25$\times$25, seed 250194) & A* & TIMEOUT & 30.1 & 590.0 & 15 & ---\\
+\midrule
+akari-25-hard & DFS   & SOLVED  & 8.0858  & 824.8  & 33   & 32\\
+(25$\times$25, seed 250291) & A* & TIMEOUT & 30.4 & 833.0 & 37 & ---\\
+\bottomrule
+\end{tabular}
+\caption{Light Up — thời gian, bộ nhớ, số node mở rộng và số bóng theo từng
+input (median 3 lượt, đo 25/10/2026, ngân sách chung 30 giây). Cột ``Bóng'' là
+\code{solution\_cost}; ``---'' nghĩa là lượt chạy chạm giới hạn trước khi kết
+luận. 72/72 lượt nằm tại \code{docs/benchmarks/2026-10-25-lightup.csv}.}
+\label{tab:lightup-per-input}
+\end{table}
+
+\begin{table}[h]
+\centering\small
+\begin{tabular}{@{}lrrr@{}}
+\toprule
+Input & Thời gian (s) & Bộ nhớ (KiB) & Node mở rộng\\
+\midrule
+akari-10-hard (seed 100291)   & 600.0 & 72{,}003 & 151{,}546\\
+akari-14-easy (seed 140097)   & 600.0 & 16{,}405 & 19{,}638\\
+akari-14-normal (seed 140194) & 600.0 & 16{,}120 & 8{,}634\\
+akari-14-hard (seed 140291)   & 600.0 & 31{,}244 & 9{,}477\\
+akari-25-easy (seed 250097)   & 600.0 & 1{,}868  & 523\\
+akari-25-normal (seed 250194) & 601.8 & 2{,}649  & 425\\
+akari-25-hard (seed 250291)   & 600.2 & 9{,}121  & 1{,}359\\
+\bottomrule
+\end{tabular}
+\caption{Light Up — chạy riêng A* với ngân sách nới rộng 600 giây (1 lượt mỗi
+input) trên 7 input vượt ngưỡng 30 giây ở Bảng~\ref{tab:lightup-per-input}.
+\textbf{Cả 7 lượt vẫn TIMEOUT.} Dữ liệu thô:
+\code{docs/benchmarks/2026-10-25-lightup-ext.csv}.}
+\label{tab:lightup-ext}
+\end{table}
+
+\textbf{Giải thích kết quả.}
+
+\begin{itemize}
+\item \textbf{DFS giải được cả 12/12 input}, mở rộng rất ít node (7--35 ở hầu hết
+các bàn, riêng 10-easy là 248). Nguyên nhân: quy tắc ``ô tối đầu tiên'' buộc mỗi
+nhánh phủ lần lượt các ô theo thứ tự, còn cắt tỉa \code{feasible} loại sớm các
+bóng xung đột; trên các bàn nhiều tường số, hầu như không phải quay lui — node
+cuối chỉ gấp ~1.3 số bóng. Thời gian tăng theo kích thước (0.02\,s ở 7$\times$7
+lên 6.7--9.7\,s ở 25$\times$25) chủ yếu do chi phí thao tác bitmask và kiểm tra
+khả thi trên $W\approx500$--$600$ ô trắng, chứ không phải do số node tăng.
+\item \textbf{A* chỉ hoàn thành 5/12}, nhưng \emph{mọi} lời giải của A* đều là
+tối ưu số bóng. Trên các input cả hai cùng giải xong, DFS khớp tối ưu ở 2 bàn
+(7-easy: 7 bóng; 7-hard: 6 bóng) và thừa bóng ở 3 bàn còn lại — rõ nhất ở
+10-normal: DFS dùng 12 bóng, A* chứng minh chỉ cần 9 (thừa 33\%).
+\item \textbf{Thời gian của A* chậm hơn DFS 9--250 lần} ở nơi hoàn thành
+(0.27 so với 0.026\,s; 26.7 so với 0.057\,s). Ba nguồn chi phí: (i) heap phải
+giữ toàn bộ frontier thay vì một nhánh; (ii) mỗi lần mở rộng tính lại ba cận
+dưới bằng quét bitmask; (iii) bảng \code{best\_g} chống tái khám phá. Số node
+của A* cũng cao hơn hẳn (70--5464 so với 7--13): thứ tự theo $f$ buộc A* xử lý
+cả các trạng thái ``rẽ ngược'' mà DFS không bao giờ sinh.
+\item \textbf{Bộ nhớ: A* tốn hơn DFS 2--40 lần} ở nơi hoàn thành và đạt đỉnh
+3621\,KiB trên 10-hard trước khi TIMEOUT — frontier phình nhanh đúng như phân
+tích lý thuyết. Riêng nhóm 25$\times$25, bộ nhớ A* (483--833\,KiB) thấp hơn DFS
+(553--825\,KiB): A* mở rộng quá chậm (chỉ 15--37 node trong 30 giây vì mỗi lần
+mở rộng tốn gần giây trên bitmask ~500 bit) nên chưa kịp tích frontier lớn, trong
+khi DFS duyệt sâu suốt 6--10 giây với visited tích lũy.
+\item \textbf{TIMEOUT không phải vô nghiệm --- và không phải do ngưỡng 30 giây
+quá thấp.} Nhóm chạy riêng A* trên cả 7 input này với ngân sách 600 giây
+(Bảng~\ref{tab:lightup-ext}): \emph{cả 7 lượt vẫn không kết thúc}. Riêng
+10-hard, A* đã mở rộng 151.546 node và giữ đỉnh cấp phát $\sim$70 MiB trong
+600 giây mà frontier vẫn chưa cạn; ở nhóm 25$\times$25, chi phí mỗi lần mở rộng
+quá lớn ($\sim$1--2 giây trên bitmask $\sim$500 bit) nên 10 phút chỉ đạt
+425--1.359 node. TIMEOUT vì thế là kết quả cạn tài nguyên \emph{thực sự}, đúng
+hành vi hàm mũ của A* như lý thuyết dự đoán; không lượt nào kết thúc bằng
+UNSOLVABLE (mọi bàn đều có witness từ generator).
+\end{itemize}
+
+Cần lưu ý cách đọc số liệu 26.68 giây của A* trên 10-normal: ba lượt đo đều cho
+25.4--28.0 giây với \emph{đúng} 5.464 node mở rộng (tìm kiếm tất định), nên đây
+là thời gian thật, không phải nhiễu đo. Chi phí mỗi node của A* trên bàn
+10$\times$10 ổn định $\approx$5 ms (10-easy: 3.5 s cho 618 node), nên 10-normal
+chậm đơn giản vì phải mở rộng gấp $\approx$8.8 lần số node: ít tường số hơn
+10-easy khiến cận dưới yếu hơn và frontier rộng hơn — và nó nằm ngay sát mép
+ngưỡng 30 giây, trong khi 10-hard (càng ít tường hơn) thì vượt hẳn ngưỡng.
+
+\subsection{Hạn chế}
+
+Độ khó của bàn được gán theo mật độ tường chứ chưa hiệu chuẩn theo thời gian
+giải thực tế; tính duy nhất nghiệm chưa kiểm tra nên không khẳng định bàn nào
+có nghiệm duy nhất. Bộ nhớ đo bằng \code{tracemalloc} là đỉnh cấp phát Python,
+không phải RSS của tiến trình. Nhóm chưa thử các cận dưới mạnh hơn (ví dụ ánh
+xạ mỗi ô tối về ít nhất một vị trí chiếu khả dĩ rồi tính matching) — hướng có
+thể kéo A* đi xa hơn trước ngưỡng TIMEOUT.

@@ -182,7 +182,8 @@ def run_batch(config_path):
                 )
                 manifest_path.write_text(json.dumps(document, indent=2) + "\n")
                 print(
-                    f"{puzzle.id}  {algorithm}  {repetition + 1}/{config['repetitions']}  {result.status}  {result.time_ms:.2f} ms",
+                    f"{puzzle.id}  {algorithm}  {repetition + 1}/{config['repetitions']}  "
+                    f"{result.status}  {result.time_ms:.2f} ms",
                     flush=True,
                 )
     summary = [
@@ -202,7 +203,8 @@ def run_batch(config_path):
         median_memory = f"{statistics.median(memory):.3f}" if memory else "—"
         other = dict(Counter(r.status for r in results if r.status != "solved"))
         summary.append(
-            f"| {size}×{size} | {algorithm} | {len(solved)}/{len(results)} | {median_time} | {median_memory} | {other or '—'} |"
+            f"| {size}×{size} | {algorithm} | {len(solved)}/{len(results)} "
+            f"| {median_time} | {median_memory} | {other or '—'} |"
         )
     (output / "summary.md").write_text("\n".join(summary) + "\n")
     print(f"Results: {output}")

@@ -1,36 +1,33 @@
-# Pipes search presentation
+# BTL1 slides (Pipes & Light Up)
 
-[Open the 12-slide PDF](pipes-search.pdf).
+Four decks, built from one `main` file per language that inputs the per-puzzle
+frame files:
 
-This is the Pipes portion of the Introduction to AI project. It covers the goal,
-formal search model, viable actions, search space, pruning, DFS and Greedy
-pseudocode, evaluation and limitations. It does not present the unfinished
-second puzzle.
+| Deck | Source | Output |
+|---|---|---|
+| Tiếng Việt | [main-vi.tex](main-vi.tex) + `pipes-vi.tex`, `lightup-vi.tex`, `results-table.tex` | `main-vi.pdf` |
+| English | [main-en.tex](main-en.tex) + `pipes-en.tex`, `lightup-en.tex`, `results-table.tex` | `main-en.pdf` |
 
-The editable source is [pipes-search.tex](pipes-search.tex), using LaTeX Beamer
-and TikZ. All board diagrams, trees and flow diagrams are vector graphics defined
-in the source. [Presentation notes](notes.md) expand the short slide text.
+Each puzzle contributes about ten frames: rules and a real sample board, the
+search formulation, shared pruning, both algorithms with pseudocode, input
+generation, the demo features, the measurement protocol, measured results and
+limitations. All board diagrams are hand-written TikZ vector graphics.
+[Presentation notes](notes.md) expand the slide text for both puzzles.
 
 ## Build
 
 With [Tectonic](https://tectonic-typesetting.github.io/):
 
 ```sh
-tectonic slides/pipes-search.tex --outdir slides
+tectonic slides/main-vi.tex   # or main-en.tex
 ```
 
-Or with an installed TeX distribution:
+The Vietnamese deck loads DejaVu Sans via fontspec for full Vietnamese glyphs;
+the English deck keeps Beamer's default fonts. Keep `results-table.tex` next to
+the sources: it contains measured medians from the published baseline
+(`docs/benchmarks/2026-10-25-pipes.csv`), not an illustrative table. When
+rerunning experiments, update it together with `docs/benchmarks/` and the
+measurement dates on the results frames.
 
-```sh
-cd slides
-pdflatex -halt-on-error pipes-search.tex
-pdflatex -halt-on-error pipes-search.tex
-```
-
-Keep `results-table.tex` next to the source. It contains measured values from
-the published baseline, not an illustrative table. When rerunning experiments,
-update it together with `docs/benchmarks/` and the measurement date on slide 11.
-
-The PDF is committed so teammates can present without installing LaTeX. Build
-logs and temporary TeX files are ignored. Deck colors use white, dark text and
-blue, matching the game's light theme.
+Build logs and temporary TeX files are ignored. Deck colors use white, dark
+text and blue, matching the games' light theme.

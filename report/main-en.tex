@@ -1,0 +1,210 @@
+% BTL1 report — Introduction to Artificial Intelligence — English version.
+% Build PDF: tectonic report/main-en.tex
+\documentclass[12pt,a4paper]{article}
+\usepackage{fontspec}
+\usepackage{polyglossia}
+\setmainlanguage{english}
+\setmainfont{Liberation Serif}
+\setsansfont{Liberation Sans}
+\setmonofont{DejaVu Sans Mono}[Scale=0.88]
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage[margin=2.4cm]{geometry}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{caption}
+\usepackage[colorlinks=true,linkcolor=blue!55!black,urlcolor=blue!55!black]{hyperref}
+
+\definecolor{codekw}{HTML}{285BC2}
+\lstset{basicstyle=\ttfamily\small,columns=fullflexible,keepspaces=true,
+  showstringspaces=false,keywordstyle=\color{codekw},frame=single,
+  rulecolor=\color{gray!40},framerule=0.3pt,aboveskip=8pt,belowskip=8pt}
+
+\captionsetup{font=small,labelfont=bf}
+\setlength{\parskip}{2pt}
+
+\newcommand{\code}[1]{\texttt{#1}}
+
+\begin{document}
+
+% ---------- Title page ----------
+\begin{titlepage}
+\centering
+{\large\textbf{[UNIVERSITY]}\\[2pt]
+\textbf{[FACULTY / DEPARTMENT]}\par}
+\vspace{18mm}
+{\Large\textbf{ASSIGNMENT 1 --- SEARCH}\\[4mm]
+\large Semester 1, academic year 2026--2027\par}
+\vspace{6mm}
+{\large Course: Introduction to Artificial Intelligence\par}
+\vspace{14mm}
+{\huge\bfseries Pipes \& Light Up:\\[3mm]
+Implementing Search Algorithms for Two Logic Puzzles\par}
+\vspace{6mm}
+\includegraphics[width=.45\textwidth]{../docs/images/pipes.png}
+\vspace{10mm}
+
+{\large\textbf{Group members}}\par\vspace{3mm}
+\begin{tabular}{@{}lll@{}}
+\toprule
+Full name & Student ID & Class\\
+\midrule
+{[Name 1]} & {[ID 1]} & {[Class 1]}\\
+{[Name 2]} & {[ID 2]} & {[Class 2]}\\
+{[Name 3]} & {[ID 3]} & {[Class 3]}\\
+\bottomrule
+\end{tabular}
+
+\vspace{12mm}
+{\large Instructor: [Instructor name]\par}
+\vspace{6mm}
+{\large [City], 25 October 2026\par}
+\end{titlepage}
+
+\tableofcontents
+\newpage
+
+% ---------- 1. Introduction ----------
+\section{Introduction}
+
+\subsection{Objectives}
+
+Assignment 1 asks the group to pick two problems from the Logic Puzzles at
+\url{https://www.puzzle-pipes.com/} (and related problems on that site) and
+implement, in Python 3, two search algorithms for \textbf{each} problem: one
+\emph{blind} search (DFS or BrFS) and one \emph{heuristic} algorithm (A*, Hill
+Climbing, etc.). The submission must include a step-by-step visual demo (game
+style), and a report describing how the group studied and implemented each
+problem, with tables of execution time and memory consumption per algorithm per
+input, and an interpretation of those numbers.
+
+\subsection{The two chosen problems}
+
+\begin{itemize}
+\item \textbf{Pipes} (\url{https://www.puzzle-pipes.com/}): rotate pipe tiles to
+form one connected, leak-free, acyclic network. Algorithms: \textbf{DFS} (blind)
+and \textbf{Greedy Best-First} (heuristic).
+\item \textbf{Light Up / Akari} (\url{https://www.puzzle-light-up.com/}, part of
+the same Logic Puzzles family): place bulbs on white cells so that every white
+cell is illuminated, no two bulbs see each other, and every numbered wall has
+exactly its count of adjacent bulbs. Algorithms: \textbf{DFS} (blind) and
+\textbf{A*} (heuristic, returning a minimum-bulb solution).
+\end{itemize}
+
+All four algorithms share the same state-space formulation style and were
+measured on the same inputs under identical resource limits.
+
+\subsection{Environment and tooling}
+
+\begin{itemize}
+\item \textbf{Language}: Python 3 (mandatory per the assignment). Development
+uses Python 3.13 with \code{uv} for dependency management.
+\item \textbf{Graphics and demo}: \code{pygame-ce} for both games;
+\code{pygame-gui} adds controls to the Light Up interface.
+\item \textbf{Testing and code quality}: \code{unittest} (50 tests across both
+packages), \code{ruff} linting, GitHub Actions CI.
+\item \textbf{Measurement}: \code{time.perf\_counter} for wall time;
+\code{tracemalloc} for peak Python allocations.
+\item \textbf{Documents}: \LaTeX{} (tectonic) for this report and the slides.
+\end{itemize}
+
+\subsection{Repository layout}
+
+One shared repository, one package per puzzle:
+
+\begin{lstlisting}
+Introduction-to-AI/
+  main.py             Common launcher: uv run main.py [pipes|lightup]
+  pipes_problem/      Pipes game, 2 algorithms, UI, benchmark, 33 tests
+  light_up_problem/   Light Up game, 2 algorithms, UI, benchmark, 17 tests
+  docs/               Algorithm analysis, benchmark evidence (CSV + md)
+  report/             LaTeX sources of this report (main-vi, main-en)
+  slides/             LaTeX sources of the slides (main-vi, main-en)
+\end{lstlisting}
+
+Run instructions are in the repository \code{README.md}. The games start with
+\code{uv run main.py pipes} and \code{uv run main.py lightup} (or
+\code{python -m pipes\_problem}, \code{python -m light\_up\_problem}).
+
+\subsection{How we studied and implemented each problem}
+
+The group followed the same process for both puzzles:
+
+\begin{enumerate}
+\item \textbf{Learn the rules}: play the original puzzle on its official site,
+note the invariants (win condition, constraints), reference
+\code{puzzle-pipes.com} / \code{puzzle-light-up.com}.
+\item \textbf{Formulate as search}: define state, initial state, actions,
+transition model, goal test and costs; choose an efficient state representation
+(orientation prefixes for Pipes, bitmasks for Light Up).
+\item \textbf{Design algorithms}: one blind search (DFS) and one heuristic search
+(Greedy / A*), plus a shared set of sound pruning rules; write pseudocode first.
+\item \textbf{Implement and demo}: build the pygame game with a step-by-step
+search visualization and solution replay.
+\item \textbf{Create inputs}: write a seeded, witness-checked puzzle generator;
+document the provenance of every input.
+\item \textbf{Measure}: run automated benchmarks recording time, memory and node
+counts to CSV; store evidence under \code{docs/benchmarks/}.
+\item \textbf{Analyze}: explain the numbers, compare theory with measurement,
+state limitations honestly.
+\end{enumerate}
+
+% ---------- 2. Pipes ----------
+\input{pipes-en}
+
+% ---------- 3. Light Up ----------
+\input{lightup-en}
+
+% ---------- 4. Conclusion ----------
+\section{Conclusion}
+
+Both required puzzles are fully implemented: each has one blind search (DFS) and
+one heuristic search (Greedy Best-First for Pipes, A* for Light Up), all in
+Python 3, all with a visual step-by-step demo, and all measured for time and
+memory on shared inputs under identical limits.
+
+Lessons from the measurements:
+
+\begin{itemize}
+\item \textbf{A heuristic is not automatically faster than blind search.} On
+Pipes, Greedy Best-First is slower than DFS on most easy inputs because heap
+maintenance and ranking outweigh ordering benefits; it only overtakes DFS on the
+hardest 7$\times$7 map. On Light Up, A* is clearly slower than DFS at 7$\times$7
+--- the price of priority-queue bookkeeping and duplicate-state management in
+exchange for a guaranteed minimum-bulb solution.
+\item \textbf{Memory reflects frontier structure.} DFS keeps few states (path
+plus current branch) while priority-queue searches must keep the whole frontier;
+yet the Pipes implementation shows DFS with \emph{higher} traced memory (copied
+prefixes and generator frames), while Light Up's A* shows higher memory than its
+DFS (frontier plus duplicate table). Implementation details matter.
+\item \textbf{State spaces grow exponentially.} Both problems hit the 30-second
+ceiling on large inputs (Pipes' hardest 7$\times$7 map takes almost twice the
+average; every Light Up 25$\times$25 run times out --- and even with A* rerun
+at a 600-second budget, all seven over-limit Light Up inputs still fail to
+finish), matching the theoretical $O(4^n)$ and $O(2^W)$ bounds.
+\item \textbf{Sound pruning does the heavy lifting.} In both puzzles most of the
+speed comes from correct pruning (feasibility checks, early cycle rejection,
+possible-connectivity, unlightable-cell detection) rather than from traversal
+order; a well-pruned blind search is already fast on small and medium inputs.
+\end{itemize}
+
+Future work: harder and provably-unsolvable inputs for broader evaluation;
+per-pruning-layer ablation; uniqueness checking for Light Up; alternative
+heuristics (MRV for Pipes, stronger admissible bounds for A*).
+
+% ---------- References ----------
+\begin{thebibliography}{9}
+\bibitem{pipes} Puzzle Pipes. \url{https://www.puzzle-pipes.com/}
+\bibitem{lightup} Puzzle Light Up (Akari). \url{https://www.puzzle-light-up.com/}
+\bibitem{aima} S.~J. Russell, P.~Norvig, \emph{Artificial Intelligence: A Modern
+Approach}, 4th edition, Pearson, 2021 (Chapter 3: Searching; Chapter 6:
+Constraint Satisfaction Problems).
+\bibitem{pydoc} Python 3 documentation: \code{time}, \code{tracemalloc},
+\code{multiprocessing}, \code{heapq}, \code{unittest}.
+\url{https://docs.python.org/3/}
+\bibitem{pygame} pygame-ce documentation. \url{https://pyga.me/docs/}
+\quad pygame\_gui documentation. \url{https://pygame-gui.readthedocs.io/}
+\end{thebibliography}
+
+\end{document}

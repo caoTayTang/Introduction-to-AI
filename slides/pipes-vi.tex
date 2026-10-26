@@ -1,0 +1,249 @@
+% Pipes frames — bản tiếng Việt, được \input từ slides/main-vi.tex.
+% Giữ nguyên các lệnh \tile/\board/\src định nghĩa trong preamble của main-vi.tex.
+
+\begin{frame}{Mục tiêu: một mạng liên thông, không chu trình}
+\begin{columns}[c,onlytextwidth]
+\column{.38\textwidth}\centering
+\begin{tikzpicture}[scale=.9]
+\board{2,12,2,12,4,5,4,5,7,11,15,13,3,8,1,1}{water}
+\end{tikzpicture}
+\column{.57\textwidth}
+\begin{itemize}
+\item Mọi cổng mở đều gặp cổng tương ứng của ô kề.
+\item Không cổng nào chìa ra ngoài bàn chơi.
+\item Tất cả các ô liên thông. Không có chu trình.
+\end{itemize}
+\vspace{4mm}
+Ô là đỉnh,connections là cạnh:
+\[
+G\text{ là cây} \quad\Longrightarrow\quad |E|=n-1
+\]
+\small Nguồn xanh chỉ để trực quan hóa nước chảy.
+\end{columns}
+\src{Luật: puzzle-pipes.com. Kiểm tra đích: model.py và search.py.}
+\end{frame}
+
+\begin{frame}{Phát biểu bài toán tìm kiếm}
+\small
+\begin{tabular}{@{}p{.23\textwidth}p{.70\textwidth}@{}}
+\toprule
+Input & $n=m^2$ ô, hình dạng cố định, biên thường (không wrap) \\
+Trạng thái & Tiền tố $s=(a_0,\ldots,a_{k-1})$ các định hướng đã gán \\
+Trạng thái đầu & Tiền tố rỗng $()$, biết trước mọi hình dạng \\
+Tác động & Gán một định hướng cho ô $k$ theo thứ tự row-major \\
+Chuyển tiếp & $s'=s+(a_k)$, nhận sau khi qua kiểm tra khả thi \\
+Đích & $k=n$ và bàn hoàn chỉnh đạt mọi luật \\
+Chi phí & 1 mỗi phép gán; không giải thuật nào dùng để xếp hạng \\
+\bottomrule
+\end{tabular}\par
+\vspace{5mm}
+\normalsize Một bước solver có thể tương ứng nhiều lần xoay 90°.\par
+\small Mọi lời giải hợp lệ đều chấp nhận; không tối ưu số lần xoay.
+\src{Mô hình trạng thái cài đặt: Search trong pipes\_problem/search.py.}
+\end{frame}
+
+\begin{frame}{Các successor hợp lệ}
+Ô kế tiếp có hình dạng cố định; tìm kiếm chọn định hướng của nó.
+\vspace{5mm}
+\begin{center}
+\begin{tikzpicture}[x=1cm,y=1cm]
+\foreach \mask/\x/\label in {3/0/NE,6/3/ES,12/6/SW,9/9/NW}{
+  \begin{scope}[shift={(\x,0)}]
+    \tile{0}{0}{\mask}{muted}
+    \draw[ink,line width=1pt] (.65,.5)--(-.5,.5)--(-.5,-.65);
+    \node[below=8mm] at (0,0) {\small\label};
+  \end{scope}}
+\node[red] at (0,-1.4) {loại};
+\node[blue] at (3,-1.4) {giữ};
+\node[red] at (6,-1.4) {loại};
+\node[red] at (9,-1.4) {loại};
+\end{tikzpicture}
+\end{center}
+\small Ví dụ ô góc trên-trái. Biên trái và trên cấm hướng N và W.\par
+\vspace{4mm}
+\normalsize Khớp láng giềng cũng kiểm tra cả cổng \emph{không} có.\par
+\small Ứng viên phải qua hết các lớp cắt tỉa dùng chung trước khi được nhận.
+\src{Ví dụ minh họa. Lọc định hướng: boundary\_domains() và compatible().}
+\end{frame}
+
+\begin{frame}{Không gian tìm kiếm}
+\begin{columns}[T,onlytextwidth]
+\column{.48\textwidth}
+\small Số xoay phân biệt mỗi ô\par\vspace{3mm}
+\begin{tabular}{@{}lr@{}}\toprule
+Khuỷu, chữ T, đầu cụt & 4\\
+Ống thẳng & 2\\
+Chữ thập & 1\\\bottomrule
+\end{tabular}
+\vspace{4mm}
+\normalsize
+\[U=\prod_{i=0}^{n-1}|R_i|\leq 4^n\]
+\small Số cách gán đầy đủ, trước kiểm tra biên.
+\column{.47\textwidth}
+\small Cây tiền tố\par\vspace{3mm}
+\begin{tikzpicture}[every node/.style={font=\small},level distance=10mm,
+ level 1/.style={sibling distance=24mm},level 2/.style={sibling distance=11mm}]
+\node {$()$}
+ child {node {$a_0$} child {node {$a_1$}} child {node {$a'_1$}}}
+ child {node {$a'_0$} child {node {$\cdots$}}};
+\end{tikzpicture}
+\par\small Độ sâu $n$, hệ số phân nhánh tối đa 4.\par
+Mỗi tiền tố có đúng một cha.
+\end{columns}
+\vspace{4mm}
+Ví dụ 4$\times$4 kèm theo: $U=268{,}435{,}456$.\par
+\small Đây là cận trên số cách gán, không phải số node đo được.
+\src{Đếm từ các xoay phân biệt trong pipes-4x4-261.json.}
+\end{frame}
+
+\begin{frame}{Cắt tỉa dùng chung}
+\centering
+\begin{tikzpicture}[node distance=5mm,
+ test/.style={draw=muted!45,minimum width=95mm,minimum height=7mm,font=\small},
+ link/.style={-{Stealth},draw=muted}]
+\node[test] (a) {Định hướng hợp lệ biên};
+\node[test,below=of a] (b) {Khớp láng giềng đã gán, chặn miền rỗng};
+\node[test,below=of b] (c) {Chặn chu trình giữa các ô đã gán};
+\node[test,below=of c] (d) {Yêu cầu kết nối khả dĩ của mọi ô};
+\draw[link] (a)--(b);\draw[link] (b)--(c);\draw[link] (c)--(d);
+\end{tikzpicture}
+\vspace{3mm}\par
+\small Cả hai giải thuật dùng cùng các kiểm tra và cùng thứ tự ô.\par
+\vspace{2mm}
+Điều kiện gốc: tổng số cổng $=2(n-1)$.\par
+Kết nối khả dĩ là điều kiện cần, chưa chứng minh tồn tại nghiệm.
+\src{Cài đặt cắt tỉa: Search.compatible(). Phân tích đầy đủ: docs/pipes-analysis.md.}
+\end{frame}
+
+\begin{frame}[fragile]{Tìm kiếm mù: Depth-First Search}
+\begin{columns}[T,onlytextwidth]
+\column{.60\textwidth}
+\begin{lstlisting}
+VISIT(s):
+  if budget exhausted: return LIMIT
+  count expansion
+  if GOAL(s): return SOLVED(s)
+  for a in rotations of tile |s|:
+    child = s + (a)
+    if FEASIBLE(child):
+      r = VISIT(child)
+      if r is SOLVED or LIMIT: return r
+  return UNSOLVABLE
+\end{lstlisting}
+\column{.35\textwidth}
+\begin{tikzpicture}[level distance=11mm,
+ level 1/.style={sibling distance=24mm},level 2/.style={sibling distance=12mm},
+ every node/.style={circle,draw=muted!50,minimum size=6mm,font=\small}]
+\node {1}
+ child[blue,thick] {node {2} child {node {3}} child {node {4}}}
+ child {node {5}};
+\end{tikzpicture}
+\par\vspace{3mm}\small Thứ tự thăm minh họa.\par
+Đi sâu một nhánh rồi quay lui.
+\end{columns}
+\vspace{4mm}
+\small Đầy đủ trên cây hữu hạn với đủ tài nguyên và cắt tỉa hợp lệ.\par
+Trường hợp xấu nhất vẫn hàm mũ.
+\src{Giả mã rút gọn khớp dfs(). Kiểm tra gốc chạy trước VISIT.}
+\end{frame}
+
+\begin{frame}{Heuristic của Greedy: số lựa chọn còn lại}
+\[
+h(s)=\sum_{i\text{ chưa gán}}\log_2 |D_i(s)|
+\]
+\small $D_i(s)$ là miền định hướng hợp lệ biên, khớp láng giềng đã gán.
+\vspace{5mm}
+\begin{center}
+\begin{tabular}{@{}lcc@{}}
+\toprule
+Ứng viên & Kích thước miền còn lại & $h(s)$\\\midrule
+A & $(1,2,4)$ & $0+1+2=3$\\
+B & $(1,1,2)$ & $0+0+1=1$\\\bottomrule
+\end{tabular}
+\end{center}
+\vspace{3mm}
+Greedy ưu tiên B: giá trị nhỏ hơn nghĩa là ít lựa chọn còn lại.\par
+\small Thứ tự hòa: tiền tố sâu hơn, rồi tới chèn sớm hơn.\par\vspace{3mm}
+Điểm số bỏ qua ràng buộc giữa các ô chưa gán.\par
+Không admissible, không đảm bảo tối ưu số lần xoay.
+\src{Ví dụ miền giả định. Độ ưu tiên thật: (h, -depth, thứ tự chèn) trong greedy().}
+\end{frame}
+
+\begin{frame}[fragile]{Greedy Best-First search}
+\begin{columns}[T,onlytextwidth]
+\column{.61\textwidth}
+\begin{lstlisting}
+push () into min-priority queue
+while queue is not empty:
+  if budget exhausted: return LIMIT
+  s = pop minimum-priority state
+  count expansion
+  if GOAL(s): return SOLVED(s)
+  for a in rotations of tile |s|:
+    child = s + (a)
+    D = FEASIBLE(child)
+    if D exists:
+      push child with (h(child),
+                       -|child|, serial)
+return UNSOLVABLE
+\end{lstlisting}
+\column{.34\textwidth}
+\small Chọn từ hàng đợi\par\vspace{3mm}
+\begin{tikzpicture}[every node/.style={font=\small}]
+\node[draw=blue,minimum width=30mm,minimum height=9mm] (b) {$B:\ h=1$};
+\node[below=0mm of b,draw=muted!50,minimum width=30mm,minimum height=9mm] (a) {$A:\ h=3$};
+\node[above=6mm of b] (pop) {mở rộng tiếp};
+\draw[-{Stealth},blue] (b)--(pop);
+\end{tikzpicture}
+\par\vspace{3mm}
+Mọi tiền tố khả thi đều nằm trong hàng đợi.\par\vspace{3mm}
+Bộ nhớ có thể tăng hàm mũ.
+\end{columns}
+\src{Kiểm tra gốc chạy trước khi push. Độ ưu tiên chỉ dùng h.}
+\end{frame}
+
+\begin{frame}{Giao thức đo lường}
+\begin{itemize}
+\item Cùng 9 map cho cả hai giải thuật.
+\item Ba map mỗi kích thước, mỗi giải thuật chạy 5 lượt.
+\item Cùng cắt tỉa, cùng thứ tự ô, cùng giới hạn tài nguyên.
+\end{itemize}
+\vspace{4mm}
+\begin{tikzpicture}[every node/.style={font=\small},node distance=17mm]
+\node (map) {Map lưu sẵn};
+\node[right=of map] (time) {Solve headless, bấm giờ};
+\node[right=of time] (mem) {Replay đo bộ nhớ riêng};
+\draw[-{Stealth},blue] (map)--(time);
+\draw[-{Stealth},blue] (time)--(mem);
+\end{tikzpicture}
+\vspace{4mm}\par
+\small Thời gian không gồm vẽ hình và phát lại. Bộ nhớ là đỉnh cấp phát
+Python được trace. Chỉ gộp hai lần đo khi kết quả trùng khớp.\par\vspace{3mm}
+Giới hạn: 30 giây tính toán và 200{,}000 lần mở rộng mỗi lượt.
+\src{Chạy batch: benchmark.py. Đo: measure() và worker.py.}
+\end{frame}
+
+\begin{frame}{Kết quả thực nghiệm}
+\input{results-table.tex}
+\vspace{3mm}
+\small Median trên 15 lượt thành công mỗi kích thước và giải thuật.\par
+Mỗi nhóm gồm 3 input phân biệt, 5 lượt bấm giờ.\par\vspace{3mm}
+DFS nhanh hơn ở 5$\times$5 và 2/3 map 7$\times$7; Greedy thắng trên map khó nhất
+(38.2 so với 40.8\,ms) và giữ bộ nhớ traced thấp hơn 4--5 lần.\par
+Input này khá dễ với cắt tỉa hiện có, chưa đủ để kết luận kẻ thắng chung.
+\src{Đo ngày 25/10/2026, Linux, Python 3.13. Dữ liệu thô: docs/benchmarks/2026-10-25-pipes.csv.}
+\end{frame}
+
+\begin{frame}{Phạm vi và thí nghiệm tiếp theo}
+\begin{itemize}
+\item Thêm map khó hơn và map vô nghiệm đã chứng minh.
+\item Đo riêng đóng góp từng lớp cắt tỉa (ablation).
+\item Giữ tách biệt UNSOLVABLE với LIMIT/CANCELLED.
+\item Thử heuristic khác (MRV) và mở rộng bộ input.
+\end{itemize}
+\vspace{5mm}
+\small\textbf{Tài liệu tham khảo}\par\vspace{2mm}
+Luật Pipes: \url{https://www.puzzle-pipes.com/}\par
+Russell \& Norvig, \emph{Artificial Intelligence: A Modern Approach},
+4th ed., chương 3 và 6. \url{https://aima.cs.berkeley.edu/}
+\end{frame}
