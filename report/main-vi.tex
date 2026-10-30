@@ -24,6 +24,7 @@
 
 \captionsetup{font=small,labelfont=bf}
 \setlength{\parskip}{2pt}
+\setlength{\emergencystretch}{3em}
 
 \newcommand{\code}[1]{\texttt{#1}}
 
@@ -60,7 +61,7 @@ Họ và tên & MSSV & Lớp\\
 \vspace{12mm}
 {\large Giảng viên hướng dẫn: [Tên giảng viên]\par}
 \vspace{6mm}
-{\large [Địa điểm], ngày 25 tháng 10 năm 2026\par}
+{\large [Địa điểm], ngày 31 tháng 10 năm 2026\par}
 \end{titlepage}
 
 \tableofcontents
@@ -91,13 +92,13 @@ tìm kiếm theo chiều sâu \textbf{DFS} (mù) và \textbf{Greedy Best-First} 
 \item \textbf{Light Up / Akari} (\url{https://www.puzzle-light-up.com/}, cùng hệ
 bài toán Logic Puzzles): đặt bóng đèn trên ô trắng sao cho mọi ô trắng được chiếu
 sáng, không bóng nào chiếu thẳng vào bóng khác và mọi tường số có đúng số bóng kề.
-Hai giải thuật: \textbf{DFS} (mù) và \textbf{A*} (heuristic, cho lời giải tối ưu
-số bóng đèn).
+Hai giải thuật đo mới: \textbf{DFS} (mù) và \textbf{Backtracking + MRV + CP}
+(tìm kiếm ràng buộc có heuristic). A* vẫn có trong ứng dụng để tối ưu số bóng.
 \end{itemize}
 
-Cả bốn giải thuật đều dùng chung mô hình phát biểu bài toán tìm kiếm trong không
-gian trạng thái và đều được đo trên cùng một bộ input với giới hạn tài nguyên
-giống nhau.
+Mỗi thực nghiệm dùng input theo cặp với cùng giới hạn tài nguyên cho các giải
+thuật được so sánh. Light Up đo mới trên 60 bàn với seed khác nhau; Pipes giữ
+bộ số liệu đã công bố trước đó.
 
 \subsection{Môi trường và công cụ}
 
@@ -106,8 +107,8 @@ giống nhau.
 triển dùng Python 3.13, quản lý phụ thuộc bằng \code{uv}.
 \item \textbf{Đồ họa và demo}: \code{pygame-ce} cho cả hai game; \code{pygame-gui}
 bổ sung điều khiển cho giao diện Light Up.
-\item \textbf{Kiểm thử và chất lượng mã}: \code{unittest} (50 test cho cả hai
-package), \code{ruff} kiểm tra phong cách mã; chạy tự động bằng GitHub Actions.
+\item \textbf{Kiểm thử và chất lượng mã}: \code{unittest} cho cả hai package,
+\code{ruff} kiểm tra phong cách mã; chạy tự động bằng GitHub Actions.
 \item \textbf{Đo lường}: \code{time.perf\_counter} cho thời gian,
 \code{tracemalloc} cho đỉnh bộ nhớ cấp phát của Python.
 \item \textbf{Biên soạn tài liệu}: \LaTeX{} (tectonic) cho báo cáo và slide.
@@ -120,16 +121,15 @@ Mã nguồn đặt trong một kho chung, mỗi bài toán một package riêng 
 \begin{lstlisting}
 Introduction-to-AI/
   main.py             Launcher chung: uv run main.py [pipes|lightup]
-  pipes_problem/      Game Pipes, 2 giai thuat, UI, benchmark, 33 test
-  light_up_problem/   Game Light Up, 2 giai thuat, UI, benchmark, 17 test
+  pipes_problem/      Game Pipes, DFS/Greedy, UI, benchmark, test
+  light_up_problem/   Light Up, DFS/CSP/A*, UI, benchmark, test
   docs/               Phan tich hoc thuat, bang chung benchmark (CSV + md)
   report/             Nguon LaTeX cua bao cao (main-vi, main-en)
   slides/             Nguon LaTeX cua slides (main-vi, main-en)
 \end{lstlisting}
 
 Cách chạy chi tiết nằm trong \code{README.md} của kho. Hai game chạy bằng
-\code{uv run main.py pipes} và \code{uv run main.py lightup} (hoặc
-\code{python -m pipes\_problem}, \code{python -m light\_up\_problem}).
+\code{uv run main.py pipes} và \code{uv run main.py lightup}.
 
 \subsection{Quy trình tìm hiểu và hiện thực}
 
@@ -143,7 +143,7 @@ ghi lại luật bất biến (điều kiện thắng, ràng buộc), tham chi�
 tác động, chuyển tiếp, kiểm tra đích và chi phí; chọn cách biểu diễn trạng thái
 hiệu quả (tiền tố định hướng cho Pipes, bitmask cho Light Up).
 \item \textbf{Thiết kế giải thuật}: một giải thuật mù (DFS) và một giải thuật
-heuristic (Greedy / A*), kèm bộ cắt tỉa hợp lệ dùng chung; viết giả mã trước
+heuristic (Greedy / MRV kết hợp propagation), kèm cắt tỉa hợp lệ; viết giả mã trước
 khi code.
 \item \textbf{Hiện thực và demo}: cài đặt game trực quan với pygame, có chế độ
 chạy từng bước (\emph{step-by-step}) cho quá trình tìm kiếm và phát lại lời giải.
@@ -163,46 +163,45 @@ ghi rõ hạn chế.
 
 % ---------- 4. Kết luận ----------
 \section{Kết luận}
-
-Nhóm đã hiện thực đầy đủ hai bài toán Logic Puzzle theo yêu cầu của đề bài: mỗi
-bài toán có một giải thuật tìm kiếm mù (DFS) và một giải thuật heuristic
-(Greedy Best-First cho Pipes, A* cho Light Up), đều viết bằng Python 3, đều có
-giao diện demo trực quan chạy từng bước và đều được đo thời gian, bộ nhớ trên
-cùng bộ input với cùng giới hạn tài nguyên.
-
-Một số bài học rút ra từ số liệu thực nghiệm:
-
+Repository có demo tìm kiếm trực quan cho cả hai bài toán. Pipes so DFS với
+Greedy Best-First; thực nghiệm Light Up mới so DFS với Backtracking + MRV + CP.
+A* vẫn có trong Light Up nhưng số liệu lịch sử không được trộn với generator
+hiện tại và thực nghiệm năm seed khác nhau.
 \begin{itemize}
-\item \textbf{Heuristic không tự động nhanh hơn mù.} Trên Pipes, Greedy Best-First
-chậm hơn DFS trên đa số input dễ vì chi phí duy trì heap và xếp hạng vượt lợi ích
-của thứ tự duyệt; chỉ trên map 7$\times$7 khó nhất Greedy mới vượt lên. Trên
-Light Up, A* chậm hơn DFS rõ rệt ở 7$\times$7 vì phải trả chi phí sắp hàng ưu
-tiên và quản lý trạng thái trùng — cái giá để đảm bảo lời giải tối ưu số bóng.
-\item \textbf{Bộ nhớ phản ánh cấu trúc frontier.} DFS giữ ít trạng thái (đường
-đi + nhánh đang xét) trong khi các giải thuật hàng ưu tiên phải giữ cả frontier;
-tuy vậy phần cài đặt Python của Pipes cho thấy DFS tốn bộ nhớ traced cao hơn do
-sao chép tiền tố và khung generator, còn A* của Light Up tốn cao hơn DFS do
-frontier và bảng trạng thái trùng.
-\item \textbf{Không gian trạng thái tăng hàm mũ.} Cả hai bài toán đều đạt giới
-hạn thời gian 30 giây ở input lớn (7$\times$7 khó của Pipes cần gần 2 lần thời
-lượng trung bình; các bản Light Up 25$\times$25 đều không giải xong trong giới
-hạn — kể cả khi nới ngân sách A* lên 600 giây, cả 7 input vượt ngưỡng của Light
-Up vẫn không kết thúc), đúng như đánh giá lý thuyết $O(4^n)$ và $O(2^W)$.
-\item \textbf{Cắt tỉa hợp lệ là yếu tố quyết định.} Trong cả hai bài toán, phần
-lớn tốc độ đến từ cắt tỉa đúng đắn (kiểm tra tính khả thi, chặn chu trình sớm,
-kiểm tra tính kết nối khả dĩ, chặn ô tối không thể được chiếu) chứ không phải
-từ thứ tự duyệt; các giải thuật mù với cắt tỉa tốt đã đủ nhanh trên input vừa
-và nhỏ.
+\item \textbf{Heuristic có chi phí.} Propagation giảm tìm kiếm nhưng tốn thêm
+công việc mỗi node. Trên bàn nhỏ cắt tỉa tốt, DFS có thể nhanh hơn; CSP cải thiện
+khả năng giải trong ngân sách ở các trường hợp rẽ nhánh lớn.
+\item \textbf{So sánh theo cặp.} Năm seed mỗi cấu hình lấy mẫu nhiều input,
+không phải lặp năm lần cùng một bàn. Hai giải thuật nhận cùng map và cùng giới
+hạn thời gian/node/bộ nhớ ước lượng.
+\item \textbf{Giới hạn không phải vô nghiệm.} Ghi riêng TIMEOUT, NODE\_LIMIT,
+MEMORY\_LIMIT. Thời lượng lượt bị dừng không ước lượng thời gian giải xong.
+Xem bảng kết quả Light Up và CSV gốc.
+\item \textbf{Định nghĩa phép đo.} Đỉnh cấp phát Python không phải RSS.
+Giới hạn bộ nhớ dùng giá trị ước lượng của solver; node CSP và DFS cũng không
+đại diện cùng lượng công việc.
 \end{itemize}
+Hướng tiếp theo: tăng số seed, thêm bàn vô nghiệm, ablation CP/MRV/cắt tỉa,
+kiểm tra duy nhất và đo thời gian riêng khi tắt tracemalloc.
 
-Hướng phát triển: bổ sung input khó và input vô nghiệm để đánh giá rộng hơn;
-đo đóng góp riêng của từng lớp cắt tỉa (ablation); kiểm tra tính duy nhất nghiệm
-cho Light Up; thử heuristic khác (MRV cho Pipes, cận dưới mạnh hơn cho A*).
-
-% ---------- Tài liệu tham khảo ----------
-\begin{thebibliography}{9}
+\clearpage
+\begin{thebibliography}{99}
+\bibitem{akari-np} B. McPhail. \emph{Light Up is NP-complete}, 2005.
+\url{https://www.mountainvistasoft.com/docs/lightup-is-np-complete.pdf}
+\bibitem{akari-difficulty} V. Dekker. \emph{A Difficulty Measure for Light Up Puzzles}.
+Luận văn cử nhân, Leiden University, 2015.
+\url{https://theses.liacs.nl/pdf/2014-2015Victor-Dekker.pdf}
+\bibitem{akari-analysis} B. Pulles. \emph{Analysis of Akari}.
+Luận văn cử nhân, Radboud University, 2021; mục 4.1.1 và 4.1.3.
+\url{https://www.cs.ru.nl/bachelors-theses/2021/Bram_Pulles___1015194___Analysis_of_Akari.pdf}
+\bibitem{akari-code} Borroot. \emph{akari}: mã nguồn bộ giải,
+đặc biệt \code{src/tracksolver.py}.
+\url{https://github.com/borroot/akari}
+\bibitem{akari-rules} Nikoli. \emph{Akari}: luật chơi chính thức.
+\url{https://www.nikoli.co.jp/en/puzzles/akari/}
+\bibitem{lightup} Puzzle Light Up. Trò chơi trực tuyến và giao diện tham khảo.
+\url{https://www.puzzle-light-up.com/}
 \bibitem{pipes} Puzzle Pipes. \url{https://www.puzzle-pipes.com/}
-\bibitem{lightup} Puzzle Light Up (Akari). \url{https://www.puzzle-light-up.com/}
 \bibitem{aima} S.~J. Russell, P.~Norvig, \emph{Artificial Intelligence: A Modern
 Approach}, 4th edition, Pearson, 2021 (chương 3: Tìm kiếm trong không gian
 trạng thái; chương 6: Ràng buộc).

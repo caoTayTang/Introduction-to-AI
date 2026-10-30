@@ -1,260 +1,200 @@
-% Light Up frames — bản tiếng Việt, được \input từ slides/main-vi.tex.
-
+% Thực nghiệm DFS/CSP hiện tại; số liệu dùng chung với report.
 \begin{frame}{Bài toán 2: Light Up (Akari)}
 \begin{columns}[c,onlytextwidth]
-\column{.42\textwidth}\centering
-\begin{tikzpicture}[scale=.62]
-  \foreach \r in {0,...,6}
-    \foreach \c in {0,...,6}
-      \fill[yellow!30] (\c-.5,-\r-.5) rectangle (\c+.5,-\r+.5);
-  \foreach \r/\c/\v in {2/2/2,3/2/0,3/5/2,3/6/0,4/2/0,5/1/0,6/3/0,6/6/1}{
-    \fill[ink!90] (\c-.5,-\r-.5) rectangle (\c+.5,-\r+.5);
-    \node[white,font=\footnotesize\bfseries] at (\c,-\r) {\v};}
-  \foreach \r/\c in {0/1,1/2,2/3,3/4,4/5,5/6,6/0}{
-    \fill[orange!85] (\c,-\r) circle (.30);
-    \fill[white] (\c,-\r) circle (.11);}
-  \draw[ink!45] (-.5,.5) grid (6.5,-6.5);
-\end{tikzpicture}
-\column{.55\textwidth}
+\column{.40\textwidth}\centering
+\input{lightup-board}
+\column{.58\textwidth}
 \begin{itemize}
-\item Đặt bóng đèn vào \textbf{ô trắng}; mỗi bóng chiếu 4 hướng tới tường/biên.
-\item Mọi ô trắng phải được chiếu sáng.
-\item Hai bóng không được chiếu thẳng vào nhau.
-\item Tường số $k$: đúng $k$ bóng kề trực tiếp.
+\item Chiếu mọi ô trắng; ánh sáng dừng tại tường hoặc biên.
+\item Hai bóng không được nhìn thấy nhau.
+\item Tường số có đúng số bóng kề trực tiếp yêu cầu.
+\item So \textbf{DFS} với \textbf{Backtracking + MRV + CP} để tìm nghiệm đầu tiên.
+\end{itemize}
+\small Bàn 7$\times$7 easy, seed 70097 hiện tại; nghiệm CSP đã kiểm chứng.
+\end{columns}
+\src{Generator: walls-first-witness-v2. A* vẫn có trong app nhưng không đo trong đợt này.}
+\end{frame}
+
+\begin{frame}{Phát biểu bài toán và đối tượng so sánh}
+\begin{itemize}
+\item Trạng thái: mask bóng $W$ bit, mask sáng, mask vị trí còn hợp lệ.
+\item Ban đầu chưa có bóng; đích: đủ sáng, đúng tường số, không xung đột.
+\item DFS: ô tối đầu tiên, thử row-major, chấp nhận rồi đi sâu ngay.
+\item CSP: propagation đến điểm cố định, MRV động, ưu tiên lợi ích chiếu sáng.
+\item Cùng bàn và ngân sách; khác cắt tỉa và công việc trong mỗi node.
 \end{itemize}
 \vspace{3mm}
-\small Bàn mẫu thật: \texttt{akari-7-easy-70097} do generator sinh,\par
-lời minh họa là nghiệm 7 bóng của nó.\par
-\src{Luật: puzzle-light-up.com. Bàn: generator/generate.py, seed 70097.}
-\end{columns}
+\textbf{Cả DFS lẫn CSP không bảo đảm tối ưu số bóng.}\par
+Đo hiệu ứng kết hợp MRV/CP, không tách riêng tác dụng của MRV.
+\src{Cài đặt: light\_up\_problem/algorithms/search.py.}
 \end{frame}
 
-\begin{frame}{Phát biểu bài toán tìm kiếm}
+\begin{frame}[fragile]{DFS: nhận bóng hợp lệ đầu rồi đi sâu}
+\begin{lstlisting}
+DFS(state):
+  check budgets
+  if GOAL(state): return SOLVED
+  target = first dark cell, row-major
+  for bulb in legal illuminators(target):
+    if FEASIBLE(place(bulb)):
+      search child immediately
+      if solved or limited: return result
+    exclude bulb from later siblings
+  return UNSOLVABLE
+\end{lstlisting}
+\small Frame tường minh giữ ứng viên chưa thử; liên kết cha dựng lại đường đi.
+Chỉ quay lui khi cây con thất bại. Không gian xấu nhất tăng hàm mũ.
+\src{depth\_first\_search(); TIMEOUT / NODE\_LIMIT / MEMORY\_LIMIT khác UNSOLVABLE.}
+\end{frame}
+
+\begin{frame}{MRV chọn ràng buộc; CP suy ra quyết định bắt buộc}
 \small
-\begin{tabular}{@{}p{.23\textwidth}p{.70\textwidth}@{}}
-\toprule
-Input & Bàn: \texttt{None} (trắng), $-1$ (tường), $0..4$ (tường số) \\
-Trạng thái & Tập ô có bóng, mã hóa \textbf{bitmask $W$ bit} ($W$ = số ô trắng) \\
-Trạng thái đầu & Tập rỗng (mask 0) \\
-Tác động & Đặt bóng vào một ô trắng hợp lệ \\
-Chuyển tiếp & Bật bit; loại successor vi phạm luật hoặc mất khả năng đạt \\
-Đích & Mọi ô trắng sáng, mọi tường số đúng, không xung đột \\
-Chi phí & 1 mỗi bóng đặt vào (trục tối ưu của A*) \\
-\bottomrule
-\end{tabular}\par
-\vspace{5mm}
-\normalsize Cả hai giải thuật rẽ nhánh theo \textbf{ô tối đầu tiên (row-major)}:
-chỉ xét bóng hợp lệ chiếu được ô đó.\par
-\small Mỗi trạng thái một cha $\Rightarrow$ không cần bảng chống lặp phức tạp;
-so sánh hai giải thuật là công bằng.
-\src{Mô hình cài đặt: \_View.branch\_cell trong light\_up\_problem/algorithms/search.py.}
+\begin{itemize}
+\item Tường còn $u$ ô hợp lệ, thiếu $r$ bóng: $\binom{u}{r}$ lựa chọn.
+\item Ô tối: một lựa chọn mỗi nguồn chiếu hợp lệ. Chọn miền nhỏ nhất;
+hòa ưu tiên tường; thử ứng viên chiếu nhiều ô tối trước.
+\item CP: tường đủ bóng $\Rightarrow$ cấm các ô kề còn lại.
+\item Số bóng thiếu bằng số ô kề hợp lệ $\Rightarrow$ buộc đặt tất cả.
+\item Một nguồn chiếu duy nhất $\Rightarrow$ buộc đặt bóng, loại các đường nhìn.
+\item Suy luận đường chéo loại vị trí làm tường thiếu ô kề hợp lệ.
+\end{itemize}
+\vspace{2mm}
+Lặp đến khi không đổi; có mâu thuẫn thì loại nhánh.
+\src{\_View.select\_mrv\_choices() và \_View.propagate().}
 \end{frame}
 
-\begin{frame}{Cắt tỉa hợp lệ dùng chung}
-\centering
-\begin{tikzpicture}[node distance=5mm,
- test/.style={draw=muted!45,minimum width=100mm,minimum height=7mm,font=\small},
- link/.style={-{Stealth},draw=muted}]
-\node[test] (a) {Bóng đặt vào ô trắng, chiếu được ô tối đầu tiên};
-\node[test,below=of a] (b) {Không xung đột tầm nhìn, không vượt tường số};
-\node[test,below=of b] (c) {Mọi tường số còn đủ ô kề hợp lệ để đạt};
-\node[test,below=of c] (d) {Không còn ô tối nào mất hết bóng chiếu khả dĩ};
-\draw[link] (a)--(b);\draw[link] (b)--(c);\draw[link] (c)--(d);
-\end{tikzpicture}
+\begin{frame}[fragile]{Backtracking + MRV + Constraint Propagation}
+\begin{lstlisting}
+CSP(state):
+  check budgets; propagate to fixed point
+  if contradiction: reject branch
+  if GOAL(state): return SOLVED
+  constraint = minimum remaining choices
+  for choice ordered by lighting gain:
+    apply choice; propagate
+    if consistent: descend immediately
+    if solved or limited: return result
+    restore parent checkpoint
+  return UNSOLVABLE
+\end{lstlisting}
+\small Checkpoint phục hồi cả bóng và miền hợp lệ. Một node CSP có thể gồm
+nhiều bóng bắt buộc, nên số node không đại diện lượng công việc tương đương.
+\src{backtracking\_mrv\_cp(); stack tường minh tránh giới hạn đệ quy Python.}
+\end{frame}
+
+\begin{frame}{Input: năm seed khác nhau cho mỗi cấu hình}
+\begin{itemize}
+\item Chọn tường trước; đặt witness trên ô tối ngẫu nhiên đến khi đủ sáng.
+\item Suy ra số tường; khoảng 25\% tường không số; kiểm chứng witness độc lập.
+\item Cỡ 7/10/14/25 $\times$ easy/normal/hard $\times$ 5 seed = \textbf{60 bàn}.
+\item Mật độ tường: 16\% / 10.5\% / 5.5\%; chưa kiểm tra duy nhất nghiệm.
+\item Hai giải thuật nhận đúng cùng bàn ở mỗi seed.
+\end{itemize}
+\vspace{3mm}
+Seed = cỡ $\times$ 10.000 + chỉ số độ khó $\times$ 97 + offset (0--4).\par
+\small Chỉ số độ khó là 1/2/3. Năm bàn khác nhau, không lặp năm lần một bàn.
+\src{JSON, seed và SHA-256 đầy đủ: 2026-10-31-lightup-dfs-csp-manifest.json.}
+\end{frame}
+
+\begin{frame}{Demo trực quan}
+\begin{itemize}
+\item DFS / A* / CSP (MRV + CP), Start Search, Pause, Resume, hai mũi tên.
+\item Đủ lịch sử ở \textbf{2 / 8 / 30 bước/giây}; không bỏ bước.
+\item CSP: từng bóng bắt buộc và lần thu hẹp miền, cả propagation ban đầu.
+\item Dấu $\times$ trên ô tối là ô cấm, tách khỏi ghi chú chơi tay.
+\item Quay lui phục hồi bóng và miền; kết quả cuối chờ hiện xong trace.
+\end{itemize}
+\vspace{3mm}
+\small Worker spawn giữ UI phản hồi. Visualizer không timeout, vẫn giới hạn
+node/bộ nhớ. Benchmark giữ đủ ba giới hạn.
+\src{ui/app.py + worker.py. Nút Compare trong app vẫn so DFS/A*.}
+\end{frame}
+
+\begin{frame}{Giao thức: 120 lượt, giữ nguyên giới hạn}
+\small
+\begin{itemize}
+\item 60 bàn $\times$ DFS/CSP; một lượt mỗi giải thuật mỗi seed; process mới, tuần tự.
+\item Đảo thứ tự giải thuật ở seed liên tiếp. Không trace/animation.
+\item Cùng \textbf{30 giây / 500.000 node / 512 MiB bộ nhớ ước lượng}.
+\item Thời gian solver khi bật tracemalloc; đỉnh cấp phát Python, không phải RSS.
+\item Không tính sinh bàn/khởi động process; kiểm chứng mọi kết quả SOLVED.
+\item Ghi riêng \texttt{TIMEOUT}, \texttt{NODE\_LIMIT}, \texttt{MEMORY\_LIMIT}.
+\end{itemize}
+\vspace{2mm}
+Lượt bị dừng không phải giải xong hay bằng chứng vô nghiệm.\par
+Median bảng gồm mọi lượt thử; median riêng lượt SOLVED có trong JSON summary.
+\src{31/10/2026; CSV + summary + manifest môi trường/mã nguồn/input trong docs/benchmarks/.}
+\end{frame}
+
+\begin{frame}{Kết quả: 7 / 10}
+\small\centering
+\begin{tabular}{@{}lcrrcrr@{}}
+\toprule
+& \multicolumn{3}{c}{DFS} & \multicolumn{3}{c}{CSP (MRV + CP)}\\
+Cỡ / mức & S/5 & s & KiB & S/5 & s & KiB\\
+\midrule
+7 easy & 5/5 & 0.0075 & 24.9 & 5/5 & 0.0066 & 25.2\\
+7 normal & 5/5 & 0.0066 & 26.8 & 5/5 & 0.0103 & 29.0\\
+7 hard & 5/5 & 0.0074 & 27.3 & 5/5 & 0.0107 & 30.5\\
+\addlinespace[2pt]
+10 easy & 5/5 & 0.0229 & 55.9 & 5/5 & 0.0288 & 56.2\\
+10 normal & 5/5 & 0.0218 & 60.0 & 5/5 & 0.0309 & 61.8\\
+10 hard & 5/5 & 0.0229 & 62.4 & 5/5 & 0.0314 & 67.8\\
+\addlinespace[2pt]
+\bottomrule
+\end{tabular}
 \vspace{3mm}\par
-\small Các kiểm tra chỉ loại trạng thái không thể tới nghiệm $\Rightarrow$ giữ
-tính đầy đủ.\par
-Đây là lý do DFS ``mù'' vẫn giải nhanh các bàn vừa và nhỏ.
-\src{Cài đặt: \_View.feasible() trong algorithms/search.py.}
+\footnotesize S: lượt SOLVED. Median trên 5 seed, gồm cả thời lượng lượt bị dừng.
+\par KiB là đỉnh cấp phát Python, không phải RSS hay bộ nhớ ước lượng.
+\src{31/10/2026; 2026-10-31-lightup-dfs-csp.csv; 30 s / 500,000 nodes / 512 MiB.}
 \end{frame}
 
-\begin{frame}[fragile]{Tìm kiếm mù: Depth-First Search}
-\begin{columns}[T,onlytextwidth]
-\column{.60\textwidth}
-\begin{lstlisting}
-DFS(puzzle, limits):
-  push mask 0 onto the stack
-  while stack is not empty:
-    if budget exhausted: return LIMIT
-    state = stack.pop()
-    if state in visited: continue
-    if GOAL(state): return SOLVED(state)
-    cell = FIRST_UNLIT_CELL(state)
-    for c in bulbs illuminating cell:
-      child = state | bit(c)
-      if FEASIBLE(child): push child
-  return UNSOLVABLE
-\end{lstlisting}
-\column{.36\textwidth}
-\small LIFO stack + tập visited.\par\vspace{3mm}
-Thứ tự rẽ nhánh cố định,\par không có thông tin heuristic.\par\vspace{3mm}
-Worst case $O(2^W)$ trạng thái.\par\vspace{3mm}
-Lời giải \textbf{đầu tiên} tìm được --- không tối ưu số bóng.
-\end{columns}
-\src{Giả mã rút gọn khớp depth\_first\_search(). TIMEOUT/NODE\_LIMIT/MEMORY\_LIMIT phân biệt UNSOLVABLE.}
-\end{frame}
-
-\begin{frame}{Heuristic của A*: ba cận dưới, lấy max}
-\[
-h(n)=\max\left\{\left\lceil \tfrac{D}{G_{\max}} \right\rceil,\;
-\max_w d_w,\;\left\lceil \tfrac{\sum_w d_w}{H_{\max}} \right\rceil\right\}
-\qquad f=g+h,\quad g=\#\text{bóng}
-\]
-\small $D$: số ô tối còn lại; $G_{\max}$: nhiều ô nhất một bóng hợp lệ chiếu được;\par
-$d_w$: phần thiếu của tường số $w$; $H_{\max}$: nhiều kề nhất một bóng thỏa cùng lúc.
-\vspace{4mm}
-\begin{center}
-\begin{tabular}{@{}ll@{}}
+\begin{frame}{Kết quả: 14 / 25}
+\small\centering
+\begin{tabular}{@{}lcrrcrr@{}}
 \toprule
-Thành phần & Lý do là cận dưới\\
+& \multicolumn{3}{c}{DFS} & \multicolumn{3}{c}{CSP (MRV + CP)}\\
+Cỡ / mức & S/5 & s & KiB & S/5 & s & KiB\\
 \midrule
-$\lceil D/G_{\max}\rceil$ & Mỗi bóng chỉ chiếu tối đa $G_{\max}$ ô tối\\
-$\max_w d_w$ & Tường thiếu $d_w$ cần ít nhất $d_w$ bóng kề\\
-$\lceil \sum_w d_w/H_{\max}\rceil$ & Tổng phần thiếu cần đủ nhiều bóng kề\\
+14 easy & 5/5 & 0.2330 & 135.3 & 5/5 & 0.0801 & 109.1\\
+14 normal & 5/5 & 0.0724 & 117.3 & 5/5 & 0.1030 & 123.5\\
+14 hard & 5/5 & 0.0832 & 126.1 & 5/5 & 0.1168 & 134.6\\
+\addlinespace[2pt]
+25 easy & 2/5 & 30.0001 & 2237.0 & 5/5 & 0.9558 & 562.1\\
+25 normal & 1/5 & 30.0004 & 3583.3 & 5/5 & 1.0274 & 696.9\\
+25 hard & 4/5 & 0.7835 & 870.3 & 5/5 & 1.0421 & 868.0\\
+\addlinespace[2pt]
 \bottomrule
 \end{tabular}
-\end{center}
-\vspace{3mm}
-Max của các cận dưới vẫn là cận dưới $\Rightarrow$ $h$ \textbf{admissible}
-$\Rightarrow$ A* trả lời giải \textbf{tối ưu số bóng} khi chạy hết.
-\src{Cài đặt: \_View.lower\_bound() trong algorithms/search.py.}
+\vspace{3mm}\par
+\footnotesize S: lượt SOLVED. Median trên 5 seed, gồm cả thời lượng lượt bị dừng.
+\par KiB là đỉnh cấp phát Python, không phải RSS hay bộ nhớ ước lượng.
+\src{31/10/2026; 2026-10-31-lightup-dfs-csp.csv; 30 s / 500,000 nodes / 512 MiB.}
 \end{frame}
 
-\begin{frame}[fragile]{A* search}
-\begin{columns}[T,onlytextwidth]
-\column{.60\textwidth}
-\begin{lstlisting}
-ASTAR(puzzle, limits):
-  push (f=h(0), g=0, mask 0) into min-heap
-  best_g = {0: 0}
-  while heap is not empty:
-    if budget exhausted: return LIMIT
-    pop state with minimum f
-    if GOAL(state): return SOLVED(state)
-    for c in bulbs illuminating
-        FIRST_UNLIT_CELL(state):
-      child = state | bit(c)
-      if FEASIBLE(child) and
-         g+1 < best_g.get(child, inf):
-        best_g[child] = g+1
-        push (g+1+h(child), g+1, child)
-  return UNSOLVABLE
-\end{lstlisting}
-\column{.36\textwidth}
-\small Min-heap giữ \textbf{toàn bộ frontier}.\par\vspace{3mm}
-Bảng \texttt{best\_g} chống tái khám phá.\par\vspace{3mm}
-Mỗi lần mở rộng tính lại ba cận dưới trên bitmask lớn.\par\vspace{3mm}
-Bộ nhớ có thể tăng hàm mũ --- thấy rõ trong số liệu.
-\end{columns}
-\src{Giả mã rút gọn khớp astar(). Chi phí đơn vị nên f không giảm theo đường đi.}
-\end{frame}
-
-\begin{frame}{Sinh input theo seed, kiểm chứng witness}
+\begin{frame}{Diễn giải kết quả đo}
 \begin{itemize}
-\item Xây \emph{witness} hoán vị tuần hoàn: mỗi hàng/cột đúng một bóng.
-\item Đề xuất tường chỉ ở chỗ không phá witness; suy số trên tường từ bóng kề.
-\item Giữ tường chỉ khi witness \emph{vẫn là nghiệm hợp lệ} (kiểm bằng chính
-\texttt{is\_goal\_state} dùng khi chơi).
+\item Giải được: \textbf{DFS 52/60}, \textbf{CSP 60/60}; TIMEOUT: 8 / 0.
+\item NODE\_LIMIT / MEMORY\_LIMIT: đều \textbf{0 lượt} ở cả hai; vẫn giữ các giới hạn.
+\item Trong 52 cặp cùng giải xong, CSP nhanh hơn ở 15; median
+$t_{DFS}/t_{CSP}=0.73$. Không gồm cặp bị dừng.
+\item Bàn nhỏ cắt tỉa tốt có thể lợi cho DFS; CP tốn thêm chi phí mỗi node.
+\item CSP giảm rẽ nhánh; một node có thể gồm nhiều bóng suy ra bắt buộc.
+\end{itemize}
+\vspace{2mm}
+Năm seed là mẫu nhỏ; mật độ tường không xếp hạng được độ khó giải đơn điệu.
+\src{Số liệu mới DFS/CSP trên generator hiện tại; không trộn dữ liệu DFS/A* ngày 25/10.}
+\end{frame}
+
+\begin{frame}{Hạn chế và thực nghiệm tiếp theo}
+\begin{itemize}
+\item Không khẳng định tối ưu số bóng hoặc nghiệm duy nhất.
+\item Tracemalloc gây overhead, không đo RSS.
+\item Năm seed mỗi cấu hình: cần tăng mẫu và bổ sung bàn vô nghiệm.
+\item Ablation CP/MRV, đo thời gian riêng khi tắt tracemalloc.
 \end{itemize}
 \vspace{4mm}
-\begin{center}
-\begin{tikzpicture}[scale=.30]
-  \foreach \r/\c in {0/1,1/2,2/3,3/4,4/5,5/6,6/0}{
-    \draw[gray!40] (\c-.5,-\r-.5) rectangle (\c+.5,-\r+.5);
-    \fill[orange!85] (\c,-\r) circle (.38);}
-  \draw[gray!40] (-.5,.5) grid (6.5,-6.5);
-\end{tikzpicture}
-\hspace{8mm}
-\begin{tabular}{@{}l@{}}
-\small 4 kích thước: 7, 10, 14, 25\\[1mm]
-\small 3 độ khó: 16\%/10.5\%/5.5\% tường\\[1mm]
-\small 12 bộ sample phủ đủ tổ hợp\\[1mm]
-\small JSON \texttt{lightup-puzzle-v1}\\[1mm]
-\small \textcolor{red}{Uniqueness chưa kiểm tra}
-\end{tabular}
-\end{center}
-\vspace{3mm}
-\small Độ khó gán theo cấu trúc (mật độ tường), chưa hiệu chuẩn thời gian giải.
-\src{Cài đặt: generator/generate.py. Witness không lưu vào bàn người chơi.}
-\end{frame}
-
-\begin{frame}{Demo trực quan trong pygame}
-\begin{itemize}
-\item \textbf{Chơi thủ công}: click đặt/bỏ bóng; ô sáng tô màu, xung đột viền đỏ,
-tường số hiển thị đếm hiện tại.
-\item \textbf{Tìm kiếm trực tiếp}: Run / Pause / Step / Stop với bộ đếm
-expanded / generated / frontier và bộ bóng hiện tại (sự kiện đã lấy mẫu).
-\item \textbf{So sánh DFS và A*} trên cùng bàn: thời gian, node, số bóng hiển thị
-cạnh nhau.
-\item \textbf{Play solution}: phát lại từng bước đặt bóng của lời giải.
-\end{itemize}
-\vspace{4mm}
-\small Solver chạy trong process riêng (spawn-safe) nên UI không bị khựng;\par
-giới hạn thời gian/node/bộ nhớ của solver được áp dụng cả trong demo.
-\src{Cài đặt: ui/app.py + worker.py.}
-\end{frame}
-
-\begin{frame}{Giao thức đo}
-\begin{itemize}
-\item 12 input sample: 4 kích thước $\times$ 3 độ khó, mỗi giải thuật 3 lượt.
-\item Giới hạn: 30\,s, 500{,}000 node, 512\,MB bộ nhớ ước tính.
-\item Cùng bàn, cùng giới hạn cho DFS và A*.
-\end{itemize}
-\vspace{4mm}
-\begin{tikzpicture}[every node/.style={font=\small},node distance=24mm]
-\node (map) {Bàn theo seed};
-\node[right=of map] (time) {Solver bấm giờ (\texttt{perf\_counter})};
-\node[right=of time] (mem) {\texttt{tracemalloc}};
-\draw[-{Stealth},blue] (map)--(time);
-\draw[-{Stealth},blue] (time)--(mem);
-\end{tikzpicture}
-\vspace{4mm}\par
-\small Cùng máy, cùng ngày với bảng Pipes (Linux, Python 3.13.14) để hai bài
-toán so sánh được.\par
-72 lượt dữ liệu thô: \texttt{docs/benchmarks/2026-10-25-lightup.csv}.
-\src{Chạy: light\_up\_problem.benchmark. Bằng chứng: docs/benchmarks/2026-10-25-lightup.md.}
-\end{frame}
-
-\begin{frame}{Kết quả: DFS nhanh và nhẹ, A* tối ưu nhưng đắt}
-\small
-\begin{tabular}{@{}llrrl@{}}
-\toprule
-Input & DFS: thời gian / node & A*: thời gian / node & Bóng (DFS $\to$ A*)\\
-\midrule
-7 easy   & 0.026\,s / 8    & 0.273\,s / 70   & $7 = 7$\\
-7 normal & 0.016\,s / 9    & 0.236\,s / 153  & $8 \to \mathbf{7}$\\
-7 hard   & 0.027\,s / 7    & 6.77\,s / 3164  & $6 = 6$\\
-10 easy  & 0.549\,s / 248  & 3.50\,s / 618   & $11 \to \mathbf{10}$\\
-10 normal& 0.057\,s / 13   & 26.7\,s / 5464  & $12 \to \mathbf{9}$\\
-10 hard  & 0.078\,s / 12   & \textcolor{red}{TIMEOUT 30\,s} (3621\,KiB) & ---\\
-14 (cả 3)& 0.35--0.42\,s / 15--17 & \textcolor{red}{TIMEOUT $\times$3} & ---\\
-25 (cả 3)& 6.7--9.7\,s / 33--35   & \textcolor{red}{TIMEOUT $\times$3} & ---\\
-\bottomrule
-\end{tabular}
-\vspace{3mm}
-\begin{itemize}
-\item DFS giải \textbf{12/12} nhờ ``ô tối đầu tiên'' + cắt tỉa: gần như không
-quay lui (node $\approx$ 1.3$\times$ số bóng).
-\item A* hoàn thành \textbf{5/12}, chậm hơn 9--250$\times$, nhưng chứng minh
-tối ưu: 10-normal chỉ cần 9 bóng thay vì 12 (DFS thừa 33\%).
-\item Nới ngân sách A* lên \textbf{600 s}: cả 7 input vẫn TIMEOUT
-(10-hard: 151k node, $\sim$70 MiB) — TIMEOUT là \emph{không kết luận}, không
-phải vô nghiệm.
-\end{itemize}
-\src{Median 3 lượt (30 s) + 1 lượt 600 s, đo 25/10/2026, Linux. Dữ liệu: docs/benchmarks/2026-10-25-lightup*.csv.}
-\end{frame}
-
-\begin{frame}{Hạn chế và hướng phát triển}
-\begin{itemize}
-\item Độ khó gán theo mật độ tường, chưa hiệu chuẩn theo thời gian giải.
-\item Tính duy nhất nghiệm chưa kiểm tra.
-\item Bộ nhớ đo bằng tracemalloc: đỉnh cấp phát Python, không phải RSS.
-\item Cận dưới mạnh hơn (matching trên ô tối) có thể kéo A* xa hơn.
-\end{itemize}
-\vspace{5mm}
-\small\textbf{Tài liệu tham khảo}\par\vspace{2mm}
-Luật Akari: \url{https://www.puzzle-light-up.com/}\par
-Russell \& Norvig, \emph{Artificial Intelligence: A Modern Approach}, 4th ed.,
-chương 3.\par
-Phân tích đầy đủ: \texttt{docs/lightup-analysis.md}.
+\small Luật: \url{https://www.puzzle-light-up.com/}\par
+Russell \& Norvig, \emph{Artificial Intelligence: A Modern Approach}, Ch. 3 và 6.\par
+Cài đặt và phân tích: \texttt{docs/lightup-analysis.md}.
 \end{frame}

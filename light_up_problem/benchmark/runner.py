@@ -10,7 +10,13 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
-from light_up_problem.algorithms.search import SearchLimits, SearchResult, astar, depth_first_search
+from light_up_problem.algorithms.search import (
+    SearchLimits,
+    SearchResult,
+    astar,
+    backtracking_mrv_cp,
+    depth_first_search,
+)
 from light_up_problem.core.model import Puzzle
 
 
@@ -35,7 +41,10 @@ class BenchmarkRow:
 def _run_one(
     puzzle: Puzzle, algorithm: str, limits: SearchLimits, cancelled: Callable[[], bool] | None = None
 ) -> tuple[SearchResult, int]:
-    solver = depth_first_search if algorithm.lower() == "dfs" else astar
+    solvers = {"dfs": depth_first_search, "astar": astar, "csp": backtracking_mrv_cp}
+    if algorithm.lower() not in solvers:
+        raise ValueError(f"Unknown algorithm: {algorithm}")
+    solver = solvers[algorithm.lower()]
     tracemalloc.start()
     try:
         result = solver(puzzle, limits, cancelled=cancelled)
@@ -55,7 +64,7 @@ def benchmark(
     """Run each algorithm repeatedly on the same immutable puzzle instance."""
     if repeats < 1:
         raise ValueError("repeats must be at least 1")
-    unknown = {name.lower() for name in algorithms} - {"dfs", "astar"}
+    unknown = {name.lower() for name in algorithms} - {"dfs", "astar", "csp"}
     if unknown:
         raise ValueError(f"Unknown algorithms: {', '.join(sorted(unknown))}")
     limits = limits or SearchLimits()

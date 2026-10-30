@@ -18,7 +18,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--difficulty", choices=DIFFICULTIES, default="easy")
     parser.add_argument("--seed", type=int)
     parser.add_argument("--puzzle-json", type=Path)
-    parser.add_argument("--algorithms", nargs="+", choices=("dfs", "astar"), default=("dfs", "astar"))
+    parser.add_argument("--algorithms", nargs="+", choices=("dfs", "astar", "csp"), default=("dfs", "astar"))
     parser.add_argument("--repeats", type=int, default=3)
     parser.add_argument("--timeout", type=float, default=30.0)
     parser.add_argument("--node-limit", type=int, default=500_000)

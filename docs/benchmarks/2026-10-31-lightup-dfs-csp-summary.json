@@ -1,0 +1,509 @@
+[
+  {
+    "size": 7,
+    "difficulty": "easy",
+    "algorithm": "DFS",
+    "runs": 5,
+    "statuses": {
+      "SOLVED": 5
+    },
+    "seeds": [
+      70097,
+      70098,
+      70099,
+      70100,
+      70101
+    ],
+    "median_attempt_seconds": 0.007468472002074122,
+    "median_peak_python_memory_bytes": 25504,
+    "median_nodes_expanded": 11,
+    "median_solved_seconds": 0.007468472002074122,
+    "median_solution_cost": 9
+  },
+  {
+    "size": 7,
+    "difficulty": "easy",
+    "algorithm": "CSP",
+    "runs": 5,
+    "statuses": {
+      "SOLVED": 5
+    },
+    "seeds": [
+      70097,
+      70098,
+      70099,
+      70100,
+      70101
+    ],
+    "median_attempt_seconds": 0.006623392000619788,
+    "median_peak_python_memory_bytes": 25808,
+    "median_nodes_expanded": 4,
+    "median_solved_seconds": 0.006623392000619788,
+    "median_solution_cost": 9
+  },
+  {
+    "size": 7,
+    "difficulty": "normal",
+    "algorithm": "DFS",
+    "runs": 5,
+    "statuses": {
+      "SOLVED": 5
+    },
+    "seeds": [
+      70194,
+      70195,
+      70196,
+      70197,
+      70198
+    ],
+    "median_attempt_seconds": 0.006568977998540504,
+    "median_peak_python_memory_bytes": 27452,
+    "median_nodes_expanded": 9,
+    "median_solved_seconds": 0.006568977998540504,
+    "median_solution_cost": 7
+  },
+  {
+    "size": 7,
+    "difficulty": "normal",
+    "algorithm": "CSP",
+    "runs": 5,
+    "statuses": {
+      "SOLVED": 5
+    },
+    "seeds": [
+      70194,
+      70195,
+      70196,
+      70197,
+      70198
+    ],
+    "median_attempt_seconds": 0.01028903599944897,
+    "median_peak_python_memory_bytes": 29688,
+    "median_nodes_expanded": 6,
+    "median_solved_seconds": 0.01028903599944897,
+    "median_solution_cost": 7
+  },
+  {
+    "size": 7,
+    "difficulty": "hard",
+    "algorithm": "DFS",
+    "runs": 5,
+    "statuses": {
+      "SOLVED": 5
+    },
+    "seeds": [
+      70291,
+      70292,
+      70293,
+      70294,
+      70295
+    ],
+    "median_attempt_seconds": 0.007366506000835216,
+    "median_peak_python_memory_bytes": 27916,
+    "median_nodes_expanded": 8,
+    "median_solved_seconds": 0.007366506000835216,
+    "median_solution_cost": 7
+  },
+  {
+    "size": 7,
+    "difficulty": "hard",
+    "algorithm": "CSP",
+    "runs": 5,
+    "statuses": {
+      "SOLVED": 5
+    },
+    "seeds": [
+      70291,
+      70292,
+      70293,
+      70294,
+      70295
+    ],
+    "median_attempt_seconds": 0.010675584999262355,
+    "median_peak_python_memory_bytes": 31220,
+    "median_nodes_expanded": 6,
+    "median_solved_seconds": 0.010675584999262355,
+    "median_solution_cost": 6
+  },
+  {
+    "size": 10,
+    "difficulty": "easy",
+    "algorithm": "DFS",
+    "runs": 5,
+    "statuses": {
+      "SOLVED": 5
+    },
+    "seeds": [
+      100097,
+      100098,
+      100099,
+      100100,
+      100101
+    ],
+    "median_attempt_seconds": 0.022936010998819256,
+    "median_peak_python_memory_bytes": 57224,
+    "median_nodes_expanded": 27,
+    "median_solved_seconds": 0.022936010998819256,
+    "median_solution_cost": 15
+  },
+  {
+    "size": 10,
+    "difficulty": "easy",
+    "algorithm": "CSP",
+    "runs": 5,
+    "statuses": {
+      "SOLVED": 5
+    },
+    "seeds": [
+      100097,
+      100098,
+      100099,
+      100100,
+      100101
+    ],
+    "median_attempt_seconds": 0.028801970001950394,
+    "median_peak_python_memory_bytes": 57548,
+    "median_nodes_expanded": 9,
+    "median_solved_seconds": 0.028801970001950394,
+    "median_solution_cost": 14
+  },
+  {
+    "size": 10,
+    "difficulty": "normal",
+    "algorithm": "DFS",
+    "runs": 5,
+    "statuses": {
+      "SOLVED": 5
+    },
+    "seeds": [
+      100194,
+      100195,
+      100196,
+      100197,
+      100198
+    ],
+    "median_attempt_seconds": 0.021841351001057774,
+    "median_peak_python_memory_bytes": 61488,
+    "median_nodes_expanded": 15,
+    "median_solved_seconds": 0.021841351001057774,
+    "median_solution_cost": 12
+  },
+  {
+    "size": 10,
+    "difficulty": "normal",
+    "algorithm": "CSP",
+    "runs": 5,
+    "statuses": {
+      "SOLVED": 5
+    },
+    "seeds": [
+      100194,
+      100195,
+      100196,
+      100197,
+      100198
+    ],
+    "median_attempt_seconds": 0.03089721099968301,
+    "median_peak_python_memory_bytes": 63332,
+    "median_nodes_expanded": 8,
+    "median_solved_seconds": 0.03089721099968301,
+    "median_solution_cost": 11
+  },
+  {
+    "size": 10,
+    "difficulty": "hard",
+    "algorithm": "DFS",
+    "runs": 5,
+    "statuses": {
+      "SOLVED": 5
+    },
+    "seeds": [
+      100291,
+      100292,
+      100293,
+      100294,
+      100295
+    ],
+    "median_attempt_seconds": 0.022878831998241367,
+    "median_peak_python_memory_bytes": 63852,
+    "median_nodes_expanded": 12,
+    "median_solved_seconds": 0.022878831998241367,
+    "median_solution_cost": 11
+  },
+  {
+    "size": 10,
+    "difficulty": "hard",
+    "algorithm": "CSP",
+    "runs": 5,
+    "statuses": {
+      "SOLVED": 5
+    },
+    "seeds": [
+      100291,
+      100292,
+      100293,
+      100294,
+      100295
+    ],
+    "median_attempt_seconds": 0.03138036700329394,
+    "median_peak_python_memory_bytes": 69452,
+    "median_nodes_expanded": 10,
+    "median_solved_seconds": 0.03138036700329394,
+    "median_solution_cost": 10
+  },
+  {
+    "size": 14,
+    "difficulty": "easy",
+    "algorithm": "DFS",
+    "runs": 5,
+    "statuses": {
+      "SOLVED": 5
+    },
+    "seeds": [
+      140097,
+      140098,
+      140099,
+      140100,
+      140101
+    ],
+    "median_attempt_seconds": 0.2330128510002396,
+    "median_peak_python_memory_bytes": 138516,
+    "median_nodes_expanded": 261,
+    "median_solved_seconds": 0.2330128510002396,
+    "median_solution_cost": 28
+  },
+  {
+    "size": 14,
+    "difficulty": "easy",
+    "algorithm": "CSP",
+    "runs": 5,
+    "statuses": {
+      "SOLVED": 5
+    },
+    "seeds": [
+      140097,
+      140098,
+      140099,
+      140100,
+      140101
+    ],
+    "median_attempt_seconds": 0.08006333600133075,
+    "median_peak_python_memory_bytes": 111668,
+    "median_nodes_expanded": 12,
+    "median_solved_seconds": 0.08006333600133075,
+    "median_solution_cost": 25
+  },
+  {
+    "size": 14,
+    "difficulty": "normal",
+    "algorithm": "DFS",
+    "runs": 5,
+    "statuses": {
+      "SOLVED": 5
+    },
+    "seeds": [
+      140194,
+      140195,
+      140196,
+      140197,
+      140198
+    ],
+    "median_attempt_seconds": 0.0723706660028256,
+    "median_peak_python_memory_bytes": 120104,
+    "median_nodes_expanded": 34,
+    "median_solved_seconds": 0.0723706660028256,
+    "median_solution_cost": 22
+  },
+  {
+    "size": 14,
+    "difficulty": "normal",
+    "algorithm": "CSP",
+    "runs": 5,
+    "statuses": {
+      "SOLVED": 5
+    },
+    "seeds": [
+      140194,
+      140195,
+      140196,
+      140197,
+      140198
+    ],
+    "median_attempt_seconds": 0.1030479410001135,
+    "median_peak_python_memory_bytes": 126428,
+    "median_nodes_expanded": 17,
+    "median_solved_seconds": 0.1030479410001135,
+    "median_solution_cost": 19
+  },
+  {
+    "size": 14,
+    "difficulty": "hard",
+    "algorithm": "DFS",
+    "runs": 5,
+    "statuses": {
+      "SOLVED": 5
+    },
+    "seeds": [
+      140291,
+      140292,
+      140293,
+      140294,
+      140295
+    ],
+    "median_attempt_seconds": 0.0832352510005876,
+    "median_peak_python_memory_bytes": 129136,
+    "median_nodes_expanded": 22,
+    "median_solved_seconds": 0.0832352510005876,
+    "median_solution_cost": 19
+  },
+  {
+    "size": 14,
+    "difficulty": "hard",
+    "algorithm": "CSP",
+    "runs": 5,
+    "statuses": {
+      "SOLVED": 5
+    },
+    "seeds": [
+      140291,
+      140292,
+      140293,
+      140294,
+      140295
+    ],
+    "median_attempt_seconds": 0.11680899199927808,
+    "median_peak_python_memory_bytes": 137844,
+    "median_nodes_expanded": 15,
+    "median_solved_seconds": 0.11680899199927808,
+    "median_solution_cost": 16
+  },
+  {
+    "size": 25,
+    "difficulty": "easy",
+    "algorithm": "DFS",
+    "runs": 5,
+    "statuses": {
+      "SOLVED": 2,
+      "TIMEOUT": 3
+    },
+    "seeds": [
+      250097,
+      250098,
+      250099,
+      250100,
+      250101
+    ],
+    "median_attempt_seconds": 30.000105909999547,
+    "median_peak_python_memory_bytes": 2290668,
+    "median_nodes_expanded": 9328,
+    "median_solved_seconds": 14.485615499001142,
+    "median_solution_cost": 73.0
+  },
+  {
+    "size": 25,
+    "difficulty": "easy",
+    "algorithm": "CSP",
+    "runs": 5,
+    "statuses": {
+      "SOLVED": 5
+    },
+    "seeds": [
+      250097,
+      250098,
+      250099,
+      250100,
+      250101
+    ],
+    "median_attempt_seconds": 0.9558479600018472,
+    "median_peak_python_memory_bytes": 575632,
+    "median_nodes_expanded": 31,
+    "median_solved_seconds": 0.9558479600018472,
+    "median_solution_cost": 68
+  },
+  {
+    "size": 25,
+    "difficulty": "normal",
+    "algorithm": "DFS",
+    "runs": 5,
+    "statuses": {
+      "SOLVED": 1,
+      "TIMEOUT": 4
+    },
+    "seeds": [
+      250194,
+      250195,
+      250196,
+      250197,
+      250198
+    ],
+    "median_attempt_seconds": 30.000401450000936,
+    "median_peak_python_memory_bytes": 3669292,
+    "median_nodes_expanded": 13886,
+    "median_solved_seconds": 1.4798977990030835,
+    "median_solution_cost": 58
+  },
+  {
+    "size": 25,
+    "difficulty": "normal",
+    "algorithm": "CSP",
+    "runs": 5,
+    "statuses": {
+      "SOLVED": 5
+    },
+    "seeds": [
+      250194,
+      250195,
+      250196,
+      250197,
+      250198
+    ],
+    "median_attempt_seconds": 1.0274173120014893,
+    "median_peak_python_memory_bytes": 713668,
+    "median_nodes_expanded": 33,
+    "median_solved_seconds": 1.0274173120014893,
+    "median_solution_cost": 52
+  },
+  {
+    "size": 25,
+    "difficulty": "hard",
+    "algorithm": "DFS",
+    "runs": 5,
+    "statuses": {
+      "SOLVED": 4,
+      "TIMEOUT": 1
+    },
+    "seeds": [
+      250291,
+      250292,
+      250293,
+      250294,
+      250295
+    ],
+    "median_attempt_seconds": 0.7834749760004343,
+    "median_peak_python_memory_bytes": 891192,
+    "median_nodes_expanded": 46,
+    "median_solved_seconds": 0.7633202200013329,
+    "median_solution_cost": 40.5
+  },
+  {
+    "size": 25,
+    "difficulty": "hard",
+    "algorithm": "CSP",
+    "runs": 5,
+    "statuses": {
+      "SOLVED": 5
+    },
+    "seeds": [
+      250291,
+      250292,
+      250293,
+      250294,
+      250295
+    ],
+    "median_attempt_seconds": 1.0420723520001047,
+    "median_peak_python_memory_bytes": 888876,
+    "median_nodes_expanded": 34,
+    "median_solved_seconds": 1.0420723520001047,
+    "median_solution_cost": 35
+  }
+]

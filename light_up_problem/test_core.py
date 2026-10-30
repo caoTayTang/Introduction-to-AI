@@ -56,6 +56,13 @@ class RuleTests(unittest.TestCase):
         self.assertFalse(is_valid_partial_state(puzzle, {(0, 0), (0, 2)}))
         self.assertNotIn((0, 2), get_legal_actions(puzzle, {(0, 0)}))
 
+    def test_diagonal_bulbs_do_not_count_toward_numbered_wall(self):
+        puzzle = Puzzle(((None, None, None), (None, 1, None), (None, None, None)))
+        diagonal = {(0, 0)}
+        self.assertEqual(get_adjacent_bulbs(puzzle, (1, 1), diagonal), set())
+        self.assertFalse(validate_numbered_walls(puzzle, diagonal))
+        self.assertTrue(validate_numbered_walls(puzzle, diagonal | {(2, 1)}))
+
     def test_goal_requires_lighting_and_clues_and_bulbs_must_be_on_white_cells(self):
         puzzle = Puzzle(((None, None), (None, None)))
         solution = {(0, 0), (1, 1)}

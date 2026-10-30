@@ -46,56 +46,37 @@ excluding live demonstrations. The decks (VI/EN) share the same frame order.
 12. **Next experiments.** Harder and unsolvable inputs, a pruning ablation, and
     keeping exhausted search distinct from a stopped search.
 
-## Part 2 — Light Up / Akari (DFS + A*)
+## Part 2 — Light Up / Akari (DFS + Backtracking/MRV/CP)
 
-13. **Light Up.** Show the real 7×7 sample (akari-7-easy-70097) with its
-    7-bulb solution. Bulbs illuminate along rows/columns until walls; no two
-    bulbs may see each other; numbered walls count their adjacent bulbs.
-    Emphasize the new axis versus Pipes: A* optimizes the bulb count while DFS
-    returns the first solution.
-14. **Formulation.** A state is a W-bit bitmask over white cells — placement,
-    conflict checks and illumination are integer operations. Both solvers
-    branch on the first unlit white cell in row-major order, so the comparison
-    is fair. One parent per state; no heavy duplicate machinery.
-15. **Shared pruning.** Feasibility: no sight-line conflicts, no overfilled
-    clues, every clue still reachable, no dark cell without a possible
-    illuminator. Sound checks only — completeness is preserved. This is why
-    "blind" DFS is fast on small boards.
-16. **DFS.** LIFO stack plus visited set; first unlit cell branching; returns
-    the first solution. TIMEOUT/NODE_LIMIT/MEMORY_LIMIT stay distinct from
-    UNSOLVABLE — a timed-out run proves nothing about solvability.
-17. **A\* lower bound.** Walk through the three components: dark cells divided
-    by the best single-bulb coverage, the largest wall deficit, and the total
-    deficit divided by the best simultaneous adjacencies. Max of lower bounds
-    is admissible; unit costs give a minimum-bulb guarantee on completion.
-18. **A\* mechanics.** The heap keeps the whole frontier; best_g fights
-    rediscovery; every expansion recomputes the bounds over big bitmasks. These
-    are exactly the measured cost sources.
-19. **Inputs.** Seeded generator with a cyclic witness (one bulb per row and
-    column); walls kept only while the witness stays valid; clue numbers
-    derived from the witness; 12 sample sets across 4 sizes and 3 densities.
-    State openly: uniqueness is not checked and difficulty labels are
-    structural, not calibrated against solve times.
-20. **Demo.** Manual play with live lit/conflict feedback; Run/Pause/Step/Stop
-    with sampled search events and counters; Compare DFS and A* on one board;
-    solution replay. Solvers run in a spawn-safe worker process.
-21. **Results (25 Oct, Linux).** DFS solved 12/12 with 7-35 expansions on most
-    boards (248 on 10-easy) — the first-unlit policy plus pruning barely
-    backtracks. A* completed 5/12, 9-250× slower, peaking at 3621 KiB before
-    timing out on 10-hard. Where both finished, A* proved fewer bulbs:
-    8→7, 11→10 and most strikingly 12→9 on 10-normal (DFS overshoots 33%).
-    At 25×25, A* expands only 15-37 states in 30 s (near a second per
-    expansion) while DFS finishes in 7-10 s. If asked about the 26.7 s A* run
-    on 10-normal: all three repeats landed at 25.4-28.0 s with exactly 5,464
-    nodes — deterministic search, stable ~5 ms per node, simply 8.8× more
-    nodes than 10-easy because fewer clues weaken the bounds. The 30 s budget
-    is our protocol choice (the brief mandates none): a 600 s A* rerun on the
-    seven over-limit inputs still timed out on all of them (10-hard reached
-    151,546 nodes and ~70 MiB in ten minutes), so TIMEOUT marks genuine
-    resource exhaustion, not unsolvability and not a tight budget.
-22. **Limitations.** Structural difficulty labels, unverified uniqueness,
-    tracemalloc ≠ RSS, and stronger (matching-based) lower bounds left as
-    future work.
+- Show the current seed 70097 board and a validated CSP solution. The old cyclic
+  witness picture is replaced by the walls-first generator's actual board.
+- A state contains bulb, illuminated and legal-location masks. DFS uses the first
+  dark cell and row-major options. It accepts the first feasible bulb and descends
+  immediately, trying siblings only after backtracking.
+- CSP propagates satisfied-wall exclusions, forced wall neighbors, sole
+  illuminators and diagonal conflicts to a fixed point. It then compares wall
+  combination counts with dark-cell illuminator counts (MRV), preferring walls
+  on ties and high lighting gain for value ordering.
+- A checkpoint restores both bulbs and legal domains. One CSP search node can
+  contain multiple forced bulbs; node counts do not measure equal work.
+- The new experiment has 4 sizes × 3 difficulties × 5 different seeds × 2
+  algorithms = 120 runs on 60 boards. Each board is run once per solver. Do not
+  describe this as five repeat timings of one map.
+- Limits stay at 30 s, 500,000 expanded nodes and 512 MiB estimated memory. Keep
+  TIMEOUT, NODE_LIMIT and MEMORY_LIMIT distinct from UNSOLVABLE. No automatic
+  extension to 600 s is part of the new experiment.
+- Read the two results slides together: SOLVED/5, median duration of all attempts,
+  and median traced peak KiB for every configuration. Limited durations are not
+  completed solve times. The summary JSON contains solved-only medians as well.
+- Fresh spawned processes and sequential execution isolate each measurement.
+  Algorithm order alternates by seed. Solver time includes tracemalloc overhead;
+  generation/startup/animation are excluded. Every SOLVED output is validated.
+- Describe the observed tradeoff, not a universal speed claim: propagation can
+  reduce branching substantially while costing more on already easy boards.
+  Check the current CSV for totals; older DFS/A* results are historical and use
+  the old generator. Neither DFS nor CSP promises minimum bulb count.
+- Five seeds are a small sample; uniqueness is unchecked; allocation is not RSS
+  or the estimate used for MEMORY_LIMIT. Next: more seeds and CP/MRV ablations.
 
 ## Live demonstrations
 
@@ -107,9 +88,10 @@ pipes_problem/maps/custom/cdai.json`).
 
 **Light Up:** run `uv run main.py lightup`. Pick the 7×7 easy sample, place a
 few bulbs manually (watch conflicts turn red), then Solve with DFS, Pause and
-Step through the live search, and finish with Play solution. Repeat with A* and
-point at the expanded/frontier counters. The Compare action shows both solvers
-on one board.
+use > to advance, then Resume Search. Repeat with CSP (MRV + CP): point out
+individual forced bulbs, forbidden-cell marks and checkpoint restoration. The
+in-app Compare action remains DFS/A*; use the benchmark suite for the published
+DFS/CSP comparison.
 
 Choose demo inputs in advance and rehearse their event sequences.
 
@@ -123,4 +105,4 @@ Choose demo inputs in advance and rehearse their event sequences.
 - Light Up formulation, bound and pseudocode: `light_up_problem/algorithms/search.py`,
   `docs/lightup-analysis.md`.
 - Measurements: `docs/benchmarks/2026-10-25-pipes.md` and
-  `docs/benchmarks/2026-10-25-lightup.md` with their raw CSVs.
+  `docs/benchmarks/2026-10-31-lightup-dfs-csp.md` with their raw CSVs and manifest.

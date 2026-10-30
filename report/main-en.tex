@@ -23,6 +23,7 @@
 
 \captionsetup{font=small,labelfont=bf}
 \setlength{\parskip}{2pt}
+\setlength{\emergencystretch}{3em}
 
 \newcommand{\code}[1]{\texttt{#1}}
 
@@ -59,7 +60,7 @@ Full name & Student ID & Class\\
 \vspace{12mm}
 {\large Instructor: [Instructor name]\par}
 \vspace{6mm}
-{\large [City], 25 October 2026\par}
+{\large [City], 31 October 2026\par}
 \end{titlepage}
 
 \tableofcontents
@@ -89,11 +90,12 @@ and \textbf{Greedy Best-First} (heuristic).
 the same Logic Puzzles family): place bulbs on white cells so that every white
 cell is illuminated, no two bulbs see each other, and every numbered wall has
 exactly its count of adjacent bulbs. Algorithms: \textbf{DFS} (blind) and
-\textbf{A*} (heuristic, returning a minimum-bulb solution).
+\textbf{Backtracking + MRV + CP} (heuristic constraint search). A* remains an optional minimum-bulb solver in the application.
 \end{itemize}
 
-All four algorithms share the same state-space formulation style and were
-measured on the same inputs under identical resource limits.
+Each experimental comparison uses paired inputs under identical resource limits.
+The updated Light Up experiment measures DFS and CSP on 60 distinct seeded boards;
+Pipes retains its previously published evidence.
 
 \subsection{Environment and tooling}
 
@@ -102,8 +104,7 @@ measured on the same inputs under identical resource limits.
 uses Python 3.13 with \code{uv} for dependency management.
 \item \textbf{Graphics and demo}: \code{pygame-ce} for both games;
 \code{pygame-gui} adds controls to the Light Up interface.
-\item \textbf{Testing and code quality}: \code{unittest} (50 tests across both
-packages), \code{ruff} linting, GitHub Actions CI.
+\item \textbf{Testing and code quality}: \code{unittest} across both packages, \code{ruff} linting, GitHub Actions CI.
 \item \textbf{Measurement}: \code{time.perf\_counter} for wall time;
 \code{tracemalloc} for peak Python allocations.
 \item \textbf{Documents}: \LaTeX{} (tectonic) for this report and the slides.
@@ -116,16 +117,18 @@ One shared repository, one package per puzzle:
 \begin{lstlisting}
 Introduction-to-AI/
   main.py             Common launcher: uv run main.py [pipes|lightup]
-  pipes_problem/      Pipes game, 2 algorithms, UI, benchmark, 33 tests
-  light_up_problem/   Light Up game, 2 algorithms, UI, benchmark, 17 tests
+  pipes_problem/      Pipes game, DFS/Greedy, UI, benchmark, tests
+  light_up_problem/   Light Up, DFS/CSP/A*, UI, benchmark, tests
   docs/               Algorithm analysis, benchmark evidence (CSV + md)
   report/             LaTeX sources of this report (main-vi, main-en)
   slides/             LaTeX sources of the slides (main-vi, main-en)
 \end{lstlisting}
 
-Run instructions are in the repository \code{README.md}. The games start with
-\code{uv run main.py pipes} and \code{uv run main.py lightup} (or
-\code{python -m pipes\_problem}, \code{python -m light\_up\_problem}).
+Run instructions are in the repository \code{README.md}. Launch either game:
+\begin{lstlisting}
+uv run main.py pipes
+uv run main.py lightup
+\end{lstlisting}
 
 \subsection{How we studied and implemented each problem}
 
@@ -139,7 +142,7 @@ note the invariants (win condition, constraints), reference
 transition model, goal test and costs; choose an efficient state representation
 (orientation prefixes for Pipes, bitmasks for Light Up).
 \item \textbf{Design algorithms}: one blind search (DFS) and one heuristic search
-(Greedy / A*), plus a shared set of sound pruning rules; write pseudocode first.
+(Greedy / MRV with constraint propagation), plus sound pruning rules; write pseudocode first.
 \item \textbf{Implement and demo}: build the pygame game with a step-by-step
 search visualization and solution replay.
 \item \textbf{Create inputs}: write a seeded, witness-checked puzzle generator;
@@ -158,45 +161,44 @@ state limitations honestly.
 
 % ---------- 4. Conclusion ----------
 \section{Conclusion}
-
-Both required puzzles are fully implemented: each has one blind search (DFS) and
-one heuristic search (Greedy Best-First for Pipes, A* for Light Up), all in
-Python 3, all with a visual step-by-step demo, and all measured for time and
-memory on shared inputs under identical limits.
-
-Lessons from the measurements:
-
+The repository provides visual search demonstrations for both puzzles. Pipes
+compares DFS with Greedy Best-First; the updated Light Up experiment compares DFS
+with Backtracking + MRV + CP. A* remains available in Light Up but its historical
+measurements are not mixed with the new generator and five-seed experiment.
 \begin{itemize}
-\item \textbf{A heuristic is not automatically faster than blind search.} On
-Pipes, Greedy Best-First is slower than DFS on most easy inputs because heap
-maintenance and ranking outweigh ordering benefits; it only overtakes DFS on the
-hardest 7$\times$7 map. On Light Up, A* is clearly slower than DFS at 7$\times$7
---- the price of priority-queue bookkeeping and duplicate-state management in
-exchange for a guaranteed minimum-bulb solution.
-\item \textbf{Memory reflects frontier structure.} DFS keeps few states (path
-plus current branch) while priority-queue searches must keep the whole frontier;
-yet the Pipes implementation shows DFS with \emph{higher} traced memory (copied
-prefixes and generator frames), while Light Up's A* shows higher memory than its
-DFS (frontier plus duplicate table). Implementation details matter.
-\item \textbf{State spaces grow exponentially.} Both problems hit the 30-second
-ceiling on large inputs (Pipes' hardest 7$\times$7 map takes almost twice the
-average; every Light Up 25$\times$25 run times out --- and even with A* rerun
-at a 600-second budget, all seven over-limit Light Up inputs still fail to
-finish), matching the theoretical $O(4^n)$ and $O(2^W)$ bounds.
-\item \textbf{Sound pruning does the heavy lifting.} In both puzzles most of the
-speed comes from correct pruning (feasibility checks, early cycle rejection,
-possible-connectivity, unlightable-cell detection) rather than from traversal
-order; a well-pruned blind search is already fast on small and medium inputs.
+\item \textbf{Heuristics have a cost.} Constraint propagation can reduce search
+while costing more per node. On small well-pruned Light Up maps, DFS can be faster;
+the current CSP comparison also improves coverage on larger branching cases.
+\item \textbf{Keep comparisons paired.} Five different seeds per configuration
+sample input diversity; they are not five repetitions of one board. Both algorithms
+receive identical maps and time/node/estimated-memory budgets.
+\item \textbf{Limits are outcomes, not unsolvability.} TIMEOUT, NODE\_LIMIT and
+MEMORY\_LIMIT are reported separately. Stopped-attempt durations do not estimate
+completed solve times. See the raw CSV and the Light Up results table.
+\item \textbf{Measurement definitions matter.} Traced Python allocation is not
+RSS or the memory-limit estimate; CSP and DFS nodes do not represent equal work.
 \end{itemize}
+Future work: more seeds and unsolvable maps, CP/MRV/pruning ablations, uniqueness
+checking, and separate runtime measurements without tracemalloc instrumentation.
 
-Future work: harder and provably-unsolvable inputs for broader evaluation;
-per-pruning-layer ablation; uniqueness checking for Light Up; alternative
-heuristics (MRV for Pipes, stronger admissible bounds for A*).
-
-% ---------- References ----------
-\begin{thebibliography}{9}
+\clearpage
+\begin{thebibliography}{99}
+\bibitem{akari-np} B. McPhail. \emph{Light Up is NP-complete}, 2005.
+\url{https://www.mountainvistasoft.com/docs/lightup-is-np-complete.pdf}
+\bibitem{akari-difficulty} V. Dekker. \emph{A Difficulty Measure for Light Up Puzzles}.
+Bachelor thesis, Leiden University, 2015.
+\url{https://theses.liacs.nl/pdf/2014-2015Victor-Dekker.pdf}
+\bibitem{akari-analysis} B. Pulles. \emph{Analysis of Akari}.
+Bachelor thesis, Radboud University, 2021; Sections 4.1.1 and 4.1.3.
+\url{https://www.cs.ru.nl/bachelors-theses/2021/Bram_Pulles___1015194___Analysis_of_Akari.pdf}
+\bibitem{akari-code} Borroot. \emph{akari}: solver implementation,
+particularly \code{src/tracksolver.py}.
+\url{https://github.com/borroot/akari}
+\bibitem{akari-rules} Nikoli. \emph{Akari}: official rules.
+\url{https://www.nikoli.co.jp/en/puzzles/akari/}
+\bibitem{lightup} Puzzle Light Up. Online game and interface reference.
+\url{https://www.puzzle-light-up.com/}
 \bibitem{pipes} Puzzle Pipes. \url{https://www.puzzle-pipes.com/}
-\bibitem{lightup} Puzzle Light Up (Akari). \url{https://www.puzzle-light-up.com/}
 \bibitem{aima} S.~J. Russell, P.~Norvig, \emph{Artificial Intelligence: A Modern
 Approach}, 4th edition, Pearson, 2021 (Chapter 3: Searching; Chapter 6:
 Constraint Satisfaction Problems).

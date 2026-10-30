@@ -1,6 +1,6 @@
 # BTL1 slides (Pipes & Light Up)
 
-Four decks, built from one `main` file per language that inputs the per-puzzle
+Two decks, built from one `main` file per language that inputs the per-puzzle
 frame files:
 
 | Deck | Source | Output |
@@ -13,6 +13,13 @@ search formulation, shared pruning, both algorithms with pseudocode, input
 generation, the demo features, the measurement protocol, measured results and
 limitations. All board diagrams are hand-written TikZ vector graphics.
 [Presentation notes](notes.md) expand the slide text for both puzzles.
+
+Light Up now compares DFS with Backtracking + MRV + Constraint Propagation using
+the [31 October experiment](../docs/benchmarks/2026-10-31-lightup-dfs-csp.md):
+five different seeds per size/difficulty, 120 paired runs on 60 boards, with
+30 s / 500,000 nodes / 512 MiB estimated-memory limits. The two results frames
+show all twelve configurations. `lightup-board.tex` contains the actual current
+seed-70097 board and a validated CSP solution. Older DFS/A* numbers are archived.
 
 ## Build
 

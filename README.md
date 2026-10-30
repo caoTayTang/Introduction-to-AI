@@ -4,8 +4,8 @@ Search algorithms for two logic puzzles, implemented in Python 3 with visual
 step-by-step demos. This repository contains **Pipes**
 ([puzzle-pipes.com](https://www.puzzle-pipes.com/), DFS + Greedy Best-First) and
 **Light Up / Akari** ([puzzle-light-up.com](https://www.puzzle-light-up.com/),
-DFS + A*). Each puzzle ships a pygame game, two solvers (one blind, one
-heuristic), automated benchmarks and tests.
+DFS, A*, and Backtracking + MRV + Constraint Propagation). Each puzzle ships a
+pygame game, automated benchmarks and tests.
 
 ![Pipes with a solved network and animated water](docs/images/pipes.png)
 
@@ -54,17 +54,43 @@ uv run main.py pipes --size 7 --seed 262
 
 Place bulbs on white cells so every white cell is illuminated, no two bulbs see
 each other along an unobstructed row or column, and every numbered wall has
-exactly its count of adjacent bulbs.
+exactly its count of immediately adjacent bulbs above, below, left and right
+(diagonals do not count).
 
 | Control | Action |
 |---|---|
 | Click | Place or remove a bulb |
 | Puzzle picker | Choose size (7/10/14/25), difficulty and seed |
 | Play manually / Solve | Switch between manual mode and the solver |
-| DFS / A* | Select the algorithm (A* returns a minimum-bulb solution) |
-| Run / Pause / Step / Stop | Watch the live search, sampled every N events |
+| DFS / A* / CSP (MRV + CP) | Select the algorithm (A* returns a minimum-bulb solution) |
+| Start Search / Resume Search, Pause, Reset | Start or resume search, pause it, or stop and clear the board |
 | Compare DFS and A* | Run both solvers on the current puzzle once |
-| Play solution | Replay the returned bulb placements step by step |
+| `<` / `>` | Pause and review search states; `>` advances the paused worker at the latest state. After solving, review solution placements |
+| Speed: 2 / 8 / 30 steps/s | Cycle playback speed; default is 8 steps/s |
+
+Visualization shows each expansion, bulb attempt, rejected branch, stack/frontier
+insertion, DFS backtrack or A* state selection, and the final goal. Each event
+stays visible for one playback interval; slow frames do not skip steps. Pause
+freezes the displayed step, and Resume Search replays forward from the current
+history position before showing new events. The final result appears after the
+trace has been displayed in order.
+
+DFS accepts the first valid candidate and immediately explores the next dark
+cell with that bulb kept in place. It tries another candidate only after the
+current branch fails and backtracks. A* evaluates and queues legal successors
+before selecting the next state with the lowest `f = g + h`.
+
+CSP runs `backtracking_mrv_cp`: it selects the most constrained wall or dark
+cell, tries a branch, and propagates forced decisions before descending. Each
+forced bulb and each domain-pruning deduction has its own playback step, with a
+reason shown below the board. Dark cells marked `×` are forbidden by the solver;
+these marks are separate from manual notes and restore with the branch checkpoint
+when backtracking. Initial propagation is animated too. Only A* shows `g/h/f`.
+The Compare button continues to compare DFS and A*. The benchmark CLI also accepts CSP.
+
+Visualization has no time limit; node and memory limits still apply. Worker
+runtime includes waits for queue space and pauses. Benchmarks keep their own time
+limits and run without visualization waits for solver performance measurements.
 
 The puzzle picker in the UI selects size, difficulty and seed; puzzles can also
 be imported as JSON by the benchmark CLI (`--puzzle-json`, format
@@ -82,16 +108,26 @@ status to CSV. Interactive runs write under `results/` (git-ignored).
 ```sh
 uv run python -m pipes_problem.benchmark        # 9 maps × DFS/Greedy × 5 runs
 uv run python -m light_up_problem.benchmark \
-  --size 7 --difficulty easy --algorithms dfs astar \
+  --size 7 --difficulty easy --algorithms dfs csp \
   --repeats 3 --timeout 30 --csv results/benchmark.csv
+uv run python -m light_up_problem.benchmark.suite \
+  --output-prefix results/lightup-dfs-csp --seeds-per-config 5 \
+  --timeout 30 --node-limit 500000 --memory-limit-mb 512
 ```
 
 `light_up_problem.benchmark` accepts `--size 7|10|14|25`,
 `--difficulty easy|normal|hard`, `--seed`, `--puzzle-json`, `--algorithms`,
 `--repeats`, `--timeout`, `--node-limit`, `--memory-limit-mb` and `--csv`.
+Algorithms are `dfs`, `astar`, and `csp`. The suite runs DFS/CSP once on each of
+five distinct seeds per size/difficulty (60 boards, 120 runs), using fresh
+processes and unchanged resource limits. This differs from `--repeats`, which
+reruns the same board. It saves raw CSV, summary JSON and an input/source manifest.
 Published evidence (CSV + summary) lives under
 [`docs/benchmarks/`](docs/benchmarks/): `2026-10-25-pipes.*` and
-`2026-10-25-lightup.*`, measured on one Linux machine for the course report.
+`2026-10-25-lightup.*` are historical baselines. The current DFS/CSP experiment
+is [2026-10-31-lightup-dfs-csp.md](docs/benchmarks/2026-10-31-lightup-dfs-csp.md):
+DFS solves 52/60 (8 TIMEOUT), CSP 60/60. NODE_LIMIT and MEMORY_LIMIT remain enabled;
+neither occurred in these runs. Both reports and slide decks use this new evidence.
 
 ## Report and slides
 
@@ -123,7 +159,7 @@ tectonic slides/main-en.tex   # slides/main-en.pdf (English)
 ```text
 main.py               Launcher: uv run main.py [pipes|lightup]
 pipes_problem/        Pipes game, solvers, tests, maps and configuration
-light_up_problem/     Light Up game, solvers (bitmask DFS + A*), tests, UI
+light_up_problem/     Light Up game, bitmask DFS / A* / CSP solvers, tests, UI
 docs/                 Algorithm analyses, benchmark evidence, images
 report/               LaTeX sources of the course report (VI + EN)
 slides/               LaTeX sources of the slides (VI + EN)
@@ -150,3 +186,10 @@ witness (uniqueness is not checked). Rules references:
 [Pipes](https://www.puzzle-pipes.com/) and
 [Light Up](https://www.puzzle-light-up.com/).
 Bundled font: Figtree under the [SIL Open Font License](pipes_problem/assets/OFL.txt).
+
+The current Light Up generator chooses walls first, places bulbs on dark cells
+until all white cells are lit, then derives numbered clues (0–4). About 25% of
+walls remain unnumbered (`-1`). Easy/Normal/Hard use total wall densities of
+16%/10.5%/5.5%, including unnumbered walls; these labels are not calibrated to
+solve times. Seeds remain reproducible with the new generator, but produce
+different boards from the old cyclic generator used for historical benchmarks.

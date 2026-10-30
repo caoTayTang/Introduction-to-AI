@@ -1,9 +1,9 @@
 """Deterministic puzzle generation with a constructive witness.
 
-The generator starts with one bulb in every row and column. It adds walls only
-when that witness remains a valid solution, then derives each clue directly
-from the witness. This guarantees at least one solution without storing an
-answer in the puzzle file.
+The generator chooses walls first, then places bulbs on randomly chosen dark
+cells until every white cell is lit. It derives numbered clues from that witness
+and leaves some walls unnumbered. This guarantees at least one solution without
+storing an answer in the puzzle file.
 """
 
 from __future__ import annotations
@@ -12,7 +12,7 @@ import random
 from dataclasses import dataclass
 
 from light_up_problem.core.model import Cell, Puzzle
-from light_up_problem.core.rules import is_goal_state
+from light_up_problem.core.rules import get_illuminated_cells, is_goal_state
 
 SIZES = (7, 10, 14, 25)
 DIFFICULTIES = ("easy", "normal", "hard")
@@ -63,38 +63,38 @@ def generate_puzzle(size: int, difficulty: str, seed: int) -> Puzzle:
         raise ValueError(f"Difficulty must be one of {DIFFICULTIES}")
 
     rng = random.Random(seed)
-    offset = rng.randrange(size)
-    witness: tuple[Cell, ...] = tuple((row, (row + offset) % size) for row in range(size))
-    bulb_set = set(witness)
     target_walls = round(size * size * _WALL_DENSITY[difficulty])
-    possible_walls = [(row, col) for row in range(size) for col in range(size) if (row, col) not in bulb_set]
-    rng.shuffle(possible_walls)
-
+    cells = [(row, col) for row in range(size) for col in range(size)]
+    walls = rng.sample(cells, target_walls)
     grid: list[list[int | None]] = [[None for _ in range(size)] for _ in range(size)]
-    accepted = 0
-    for row, col in possible_walls:
-        if accepted >= target_walls:
-            break
+    for row, col in walls:
         grid[row][col] = -1
-        candidate = _with_clues(grid, witness, size, seed, difficulty, "candidate")
-        if is_goal_state(candidate, witness):
-            accepted += 1
-        else:
-            grid[row][col] = None
 
+    layout = Puzzle(tuple(tuple(row) for row in grid))
+    dark = {cell for cell in cells if layout.is_white(cell)}
+    bulbs: list[Cell] = []
+    while dark:
+        bulb = rng.choice(sorted(dark))
+        bulbs.append(bulb)
+        dark.difference_update(get_illuminated_cells(layout, (bulb,)))
+    witness = tuple(bulbs)
+
+    unnumbered_count = min(target_walls - 1, max(1, round(target_walls * 0.25)))
+    unnumbered = frozenset(rng.sample(walls, unnumbered_count))
     puzzle_id = f"akari-{size}-{difficulty}-{seed}"
-    puzzle = _with_clues(grid, witness, size, seed, difficulty, puzzle_id)
+    puzzle = _with_clues(grid, witness, size, seed, difficulty, puzzle_id, unnumbered_walls=unnumbered)
     if not is_goal_state(puzzle, witness):
-        # Keeping fewer blockers is safe; this guard protects future changes.
         raise RuntimeError("Generator produced a board whose constructive witness is invalid")
     metrics = difficulty_metrics(puzzle)
     metadata = {
-        "generator": "cyclic-witness-v1",
+        "generator": "walls-first-witness-v2",
         "witness_verified": True,
         "uniqueness": "not_checked",
-        "wall_count": accepted,
+        "wall_count": target_walls,
+        "numbered_wall_count": target_walls - unnumbered_count,
+        "unnumbered_wall_count": unnumbered_count,
         "target_wall_count": target_walls,
-        "difficulty_method": "seeded wall density; easy has more numbered clues, hard has fewer",
+        "difficulty_method": "seeded total wall density; easy has more walls, hard has fewer",
         "difficulty_metrics": {
             "clue_density": round(metrics.clue_density, 5),
             "constrained_white_fraction": round(metrics.constrained_white_fraction, 5),
@@ -105,13 +105,20 @@ def generate_puzzle(size: int, difficulty: str, seed: int) -> Puzzle:
 
 
 def _with_clues(
-    grid: list[list[int | None]], witness: tuple[Cell, ...], size: int, seed: int, difficulty: str, puzzle_id: str
+    grid: list[list[int | None]],
+    witness: tuple[Cell, ...],
+    size: int,
+    seed: int,
+    difficulty: str,
+    puzzle_id: str,
+    *,
+    unnumbered_walls: frozenset[Cell] = frozenset(),
 ) -> Puzzle:
     bulbs = set(witness)
     rows = [row.copy() for row in grid]
     for row in range(size):
         for col in range(size):
-            if rows[row][col] == -1:
+            if rows[row][col] == -1 and (row, col) not in unnumbered_walls:
                 rows[row][col] = sum((row + dr, col + dc) in bulbs for dr, dc in ((-1, 0), (1, 0), (0, -1), (0, 1)))
     return Puzzle(tuple(tuple(row) for row in rows), puzzle_id, difficulty, seed)
 

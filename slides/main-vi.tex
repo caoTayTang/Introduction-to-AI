@@ -52,7 +52,7 @@
 {\color{blue}\Huge\bfseries Pipes \& Light Up}\par\vspace{4mm}
 {\Large Giải thuật tìm kiếm cho hai bài toán Logic Puzzle}\par\vspace{7mm}
 Nhập môn Trí tuệ nhân tạo --- BTL1 (HK1 2026--2027)\par\vspace{3mm}
-\small DFS (mù) + Greedy Best-First (Pipes)\quad$\cdot$\quad DFS (mù) + A* (Light Up)\par\vspace{2mm}
+\small DFS (mù) + Greedy Best-First (Pipes)\quad$\cdot$\quad DFS + MRV/CP (Light Up)\par\vspace{2mm}
 \footnotesize [Nhóm --- thành viên điền tại đây]
 \column{.33\textwidth}
 \centering
@@ -68,11 +68,11 @@ Nhập môn Trí tuệ nhân tạo --- BTL1 (HK1 2026--2027)\par\vspace{3mm}
 % ---------- Kết ----------
 \begin{frame}{Tổng kết}
 \begin{itemize}
-\item Hai bài toán, bốn giải thuật, cùng một khung phát biểu bài toán tìm kiếm.
-\item Mọi giải thuật đều demo được từng bước trực quan và đo trên cùng input.
-\item DFS + cắt tỉa hợp lệ: nhanh và nhẹ trên input vừa; heuristic trả chi phí
-sắp xếp để đổi lại thứ tự duyệt tốt hơn (Greedy) hoặc tối ưu chi phí (A*).
-\item Số liệu đầy đủ: \texttt{docs/benchmarks/2026-10-25-*.csv}.
+\item Pipes: DFS / Greedy. Light Up đo mới: DFS / MRV + CP.
+\item Demo đủ bước tìm kiếm; CSP có cả từng suy luận bắt buộc.
+\item Light Up: 60 bàn khác nhau, 120 lượt theo cặp, giữ nguyên giới hạn.
+\item Ghi tỷ lệ giải được và TIMEOUT / NODE\_LIMIT / MEMORY\_LIMIT riêng.
+\item Dữ liệu: \texttt{docs/benchmarks/2026-10-31-lightup-dfs-csp.csv}.
 \end{itemize}
 \vspace{5mm}
 \small\textbf{Tài liệu tham khảo}\par\vspace{2mm}

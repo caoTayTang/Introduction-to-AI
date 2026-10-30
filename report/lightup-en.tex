@@ -1,309 +1,236 @@
-% Light Up section of the report — \input from main-vi.tex / main-en.tex.
+% Light Up/Akari: research process, design choices and implementation evidence.
 \section{Problem 2: Light Up (Akari)}
+\subsection{Research process and rules}
+Light Up, also called Akari, is a grid-based logic puzzle developed by Nikoli
+in 2001~\cite{akari-rules}. The group started with Nikoli's official rules,
+examined the interactions on Puzzle Light Up, and then studied solving methods
+and difficulty assessment before implementing the program~\cite{akari-rules,lightup}.
+McPhail proves that deciding whether a general Light Up instance has a solution
+is NP-complete, by a reduction from Circuit-SAT~\cite{akari-np}. This motivates
+our use of search supported by pruning and constraint deductions.
 
-\subsection{Studying the assignment and the rules}
-
-We studied Light Up (also known as Akari) at
-\url{https://www.puzzle-light-up.com/}, part of the same Logic Puzzles family as
-Pipes. The rules, distilled by playing:
-
+A board contains white cells and black walls, some numbered 0--4. A valid
+solution satisfies Nikoli's rules~\cite{akari-rules}:
 \begin{itemize}
-\item The board holds \emph{white cells}, \emph{unnumbered black walls} and
-\emph{numbered walls} (0--4). The task: place bulbs on white cells.
-\item Each bulb shines in the four orthogonal directions until blocked by a wall
-or the edge; a bulb's own cell counts as lit.
-\item \textbf{Constraint 1}: every white cell must be illuminated.
-\item \textbf{Constraint 2}: no two bulbs may see each other (same row/column
-with no wall in between).
-\item \textbf{Constraint 3}: a wall numbered $k$ must have exactly $k$
-orthogonally adjacent bulbs.
+\item Bulbs occupy white cells and illuminate their own cell plus uninterrupted
+row and column cells up to a wall or the boundary.
+\item Every white cell must be lit.
+\item No bulb may illuminate another. Bulbs may share a row or column when a wall separates them.
+\item A wall numbered $k$ has exactly $k$ orthogonally adjacent bulbs; diagonals
+do not count. Unnumbered walls only block light.
 \end{itemize}
+Puzzle Light Up~\cite{lightup} informed the size/level selectors, left-click
+placement and right-click $\times$ marks. The group added algorithm playback
+and search statistics for the educational demonstration.
 
-Compared with Pipes, this problem adds a \emph{cost} axis: the original game's
-solutions are unique (or nearly so), but the general problem admits placements
-with different bulb counts. We gave the heuristic solver an optimization goal:
-\textbf{A* returns a minimum-bulb solution}, while DFS returns the first solution
-it finds. This difference is central to interpreting the measurements.
+\subsection{Problem model}
+Let $P$ be the white cells, with a binary variable $x_i$ for each $i\in P$;
+$x_i=1$ means a bulb is present. Let $V(i)$ contain cells visible from $i$,
+including itself; $L$ be an uninterrupted horizontal or vertical white segment;
+and $N(w)$ be the white neighbors of numbered wall $w$. The rules become:
+\begin{align*}
+\sum_{j\in V(i)}x_j &\geq 1 &&\text{(every white cell is lit)},\\
+\sum_{j\in L}x_j &\leq 1 &&\text{(no bulbs see one another)},\\
+\sum_{j\in N(w)}x_j &= k_w &&\text{(exact numbered-wall count)}.
+\end{align*}
+Initially no bulbs are placed; a goal satisfies all three constraint families.
+The code stores bulb, illuminated and legal-location sets as bitmasks. For CSP,
+a placed bulb has domain $\{1\}$, a forbidden cell $\{0\}$, and an undecided
+cell $\{0,1\}$. A separate goal validator is shared by solvers, generated-board
+verification and experimental-result validation.
 
-\subsection{Search problem formulation}
-
-Let $W$ be the number of white cells. The single most impactful representation
-decision: a state is a \textbf{$W$-bit integer bitmask} where bit $i$ means
-white cell $i$ holds a bulb. Placing bulbs, checking conflicts and computing
-illumination become integer operations:
-
-\begin{table}[h]
-\centering\small
-\begin{tabular}{@{}p{.20\textwidth}p{.74\textwidth}@{}}
-\toprule
-Component & Definition in this implementation\\
-\midrule
-Input & Board rows: \code{None} (white), $-1$ (wall), $0..4$ (numbered wall)\\
-State & Set of bulb cells, encoded as a $W$-bit bitmask\\
-Initial state & Empty set (mask 0)\\
-Action & Place a bulb on an eligible white cell\\
-Transition & Set the cell's bit; reject successors that break rules or reachability\\
-Goal test & All white cells lit, all clues exact, no bulb conflicts\\
-Cost & One per placed bulb (A*'s objective)\\
-Solution & A goal bulb set plus its placement order (path)\\
-\bottomrule
-\end{tabular}
-\caption{Search formulation for Light Up.}
-\end{table}
-
-Both solvers \textbf{branch on the first unlit white cell in row-major order}:
-only currently-legal bulbs that would illuminate that cell are considered. This
-gives the assignment space a tree structure (one parent per state), prevents
-duplicates naturally, and is \emph{identical for both solvers}, keeping the
-comparison fair. Before accepting a successor, the shared \code{feasible} check
-verifies: no line-of-sight conflict, no overfilled clue, every clue still able
-to reach its count with legal adjacent cells, and no unlit cell left without a
-possible legal illuminator. All are sound --- they only discard states that
-cannot reach a goal.
-
-\subsection{Blind search: Depth-First Search}
-
-DFS keeps a LIFO stack of masks plus a visited set. The branching order
-(``first unlit cell, row-major'') uses no heuristic information:
-
-\begin{lstlisting}
-DFS(puzzle, limits):
-  push mask 0 onto the stack
-  while stack is not empty:
-    if budget exhausted: return TIMEOUT / NODE_LIMIT / MEMORY_LIMIT
-    state = stack.pop()
-    if state in visited: continue;  mark visited
-    if GOAL(state): return SOLVED(state)
-    cell = FIRST_UNLIT_CELL(state)        # row-major policy
-    for c in legal bulbs illuminating cell:
-      child = state | bit(c)
-      if FEASIBLE(child): push child
-  return UNSOLVABLE
-\end{lstlisting}
-
-DFS is complete on this finite space with sound pruning, but its \emph{first
-solution is not minimum-cost}. Worst-case time is $O(2^W)$ states; memory holds
-the visited set and the stack, also exponential in the worst case. Time, node
-and memory limits end with statuses \emph{distinct} from UNSOLVABLE --- a TIMEOUT
-run is not evidence of unsolvability.
-
-\subsection{Heuristic search: A* with an admissible lower bound}
-
-A* explores by $f(n) = g(n) + h(n)$ with $g(n)$ = bulbs placed (unit cost), a
-min-heap frontier and a \code{best\_g} table that discards rediscoveries at no
-better cost. The heuristic is the maximum of three lower bounds on the bulbs
-still needed:
-
-\[
-h(n) = \max\left\{
-\left\lceil \tfrac{D}{G_{\max}} \right\rceil,\;
-\max_w d_w,\;
-\left\lceil \tfrac{\sum_w d_w}{H_{\max}} \right\rceil
-\right\}
-\]
-
-where $D$ = remaining dark cells, $G_{\max}$ = the most dark cells any single
-legal bulb could light right now, $d_w$ = numbered wall $w$'s deficit (bulbs
-still owed), and $H_{\max}$ = the most wall adjacencies one legal bulb could
-satisfy simultaneously. Each component lower-bounds the remaining bulbs: one
-bulb lights at most $G_{\max}$ cells; wall $w$ still needs at least $d_w$ bulbs;
-the total deficit $\sum d_w$ needs at least
-$\lceil \sum d_w / H_{\max}\rceil$ bulbs. The maximum of lower bounds is a lower
-bound, so $h$ is \textbf{admissible}; with unit costs and a completed search,
-A* returns a \textbf{minimum-bulb} solution.
-
-\begin{lstlisting}
-ASTAR(puzzle, limits):
-  push (f = h(0), g = 0, mask 0) into a min-heap
-  best_g = {0: 0}
-  while heap is not empty:
-    if budget exhausted: return TIMEOUT / NODE_LIMIT / MEMORY_LIMIT
-    pop state with minimum f
-    if GOAL(state): return SOLVED(state)
-    for c in legal bulbs illuminating FIRST_UNLIT_CELL(state):
-      child = state | bit(c)
-      if FEASIBLE(child) and g+1 < best_g.get(child, inf):
-        best_g[child] = g + 1
-        push (g + 1 + h(child), g + 1, child)
-  return UNSOLVABLE
-\end{lstlisting}
-
-The price: the heap holds the \emph{entire frontier}, the \code{best\_g} table
-holds every discovered state, and each expansion recomputes three bounds over
-large bitmasks. This is exactly where the measured time and memory gaps come
-from.
-
-\subsection{Implementation and visual demo}
-
-The implementation lives in \code{light\_up\_problem}, preserving the upstream
-layout: \code{core/} (board model, rules, JSON), \code{algorithms/search.py}
-(both bitmask solvers), \code{generator/} (seeded boards), \code{benchmark/}
-(measurement CLI), \code{ui/app.py} (pygame + pygame\_gui game), and
-\code{worker.py} (spawn-safe solver process). The demo interface offers:
-
-\begin{itemize}
-\item \textbf{Manual play}: click to place or remove a bulb; lit cells are
-highlighted, conflicts outlined in red, numbered walls show their current count.
-\item \textbf{Step-by-step search demo}: pick DFS or A*, then Run / Pause / Step
-/ Stop. Sampled \code{SearchEvent}s stream to the UI showing the current bulb
-set, the focused cell, and expanded/generated/frontier counters. \emph{Play
-solution} replays the returned placements one by one.
-\item \textbf{Compare DFS and A*}: runs both solvers on the current puzzle and
-shows time, node counts and bulb counts side by side.
-\end{itemize}
-
-\subsection{Creating inputs}
-
-Boards are generated deterministically from a seed by
-\code{generator/generate.py}: build a cyclic \emph{witness} (one bulb per row
-and column), propose walls only away from witness bulbs, derive clue values from
-adjacent witness bulbs, and keep a wall only if the witness remains valid. The
-witness is verified with the same \code{is\_goal\_state} used during play but is
-\emph{not} stored in the player-facing board. Twelve samples cover all 4 sizes
-(7, 10, 14, 25) $\times$ 3 difficulties (easy/normal/hard, target wall densities
-16\%/10.5\%/5.5\% of board area). Puzzles serialize as JSON in the
-\code{lightup-puzzle-v1} format via \code{save\_puzzle}/\code{load\_puzzle} or
-\code{-{}-puzzle-json}. Two limits are stated openly: difficulty labels are
-structural (wall density), not calibrated against solve times; and solution
+\subsection{Difficulty design and puzzle generation}
+The group consulted Dekker~\cite{akari-difficulty}, who measures difficulty
+through the solving techniques required, from wall/dark-cell deductions to
+patterns and guesses. To simplify this assignment, the program \textbf{does not
+implement that rating system}: easy/normal/hard differ only in their
+\textbf{target wall density}. In \path{light_up_problem/generator/generate.py},
+a board of side $n$ receives $M=\operatorname{round}(\rho n^2)$ walls:
+\begin{center}\small
+\begin{tabular}{@{}lrrrrr@{}}\toprule
+Level & $\rho$ & $7\times7$ & $10\times10$ & $14\times14$ & $25\times25$\\\midrule
+easy   & 16\%   & 8 & 16 & 31 & 100\\
+normal & 10.5\% & 5 & 10 & 21 & 66\\
+hard   & 5.5\%  & 3 & 6 & 11 & 34\\
+\bottomrule\end{tabular}
+\end{center}
+$M$ counts numbered and unnumbered walls together; the table follows Python's
+rounding exactly. All levels use the same generation procedure:
+\begin{enumerate}
+\item Select $M$ random wall positions using the seed.
+\item Repeatedly place a bulb on a randomly chosen dark white cell until all
+white cells are lit, producing a witness solution.
+\item Derive wall numbers from adjacent witness bulbs, leave approximately
+25\% of walls unnumbered, and validate the witness before returning the board.
+\end{enumerate}
+The solver does not receive the witness. Clue-density and constraint-coverage
+metrics are recorded as metadata, not used to assign difficulty labels. A hard
+label therefore does not guarantee a longer solve time than easy, and solution
 uniqueness is not checked.
 
-\subsection{Experimental results: time and memory}
+\subsection{Algorithm selection and implementation}
+\paragraph{DFS baseline.}
+DFS selects the first dark cell in row-major order and tries legal illuminators
+in fixed order. It descends immediately after the first feasible candidate,
+returning to another candidate only when the subtree fails. Feasibility checks
+reject conflicts, unreachable wall counts and dark cells without an illuminator.
+Later siblings exclude earlier options to avoid generating the same bulb sets
+in different placement orders. Explicit stack frames avoid Python recursion
+limits; parent links reconstruct the solution.
 
-\textbf{Protocol.} Linux x86\_64 (kernel 6.8), Python 3.13.14 --- the same
-machine as the Pipes tables. Twelve sample inputs (4 sizes $\times$ 3
-difficulties), 3 repeats per algorithm, 30-second timeout, 500{,}000-node limit,
-512 MB estimated-memory limit. Time is the solver's own \code{perf\_counter}
-measurement; memory is the \code{tracemalloc} peak around the solver call. All
-72 runs are stored at \code{docs/benchmarks/2026-10-25-lightup.csv}; the table
-below reports medians of the 3 repeats. The 30-second budget is \emph{our
-experimental design choice} (the assignment brief mandates no time limit),
-shared by both algorithms; for the seven inputs where A* exceeded it, we reran
-A* once with a 600-second budget (20$\times$) --- Table~\ref{tab:lightup-ext-en}
-shows whether those runs finish, so TIMEOUT is not declared merely because the
-budget was small.
+\paragraph{CSP: Backtracking + MRV + Constraint Propagation.}
+The group consulted Pulles's combination of forced deductions and backtracking
+in Sections 4.1.1 and 4.1.3~\cite{akari-analysis}, together with
+\code{tracksolver.py} in Borroot/akari~\cite{akari-code}. These informed the
+handling of dark cells, candidates and state restoration. The current program
+implements this approach with bitmasks, propagation at each branch and
+\textbf{dynamic constraint-level MRV}; the following describes the actual code.
 
-\begin{table}[h]
-\centering\small
-\begin{tabular}{@{}lllrrrr@{}}
-\toprule
-Input & Algorithm & Result & Time (s) & Memory (KiB) & Nodes & Bulbs\\
-\midrule
-akari-7-easy & DFS    & SOLVED  & 0.0258  & 18.0   & 8    & 7\\
-(7$\times$7, seed 70097) & A* & SOLVED & 0.2729 & 36.5 & 70 & 7\\
-\midrule
-akari-7-normal & DFS  & SOLVED  & 0.0161  & 20.0   & 9    & 8\\
-(7$\times$7, seed 70194) & A* & SOLVED & 0.2355 & 63.2 & 153 & \textbf{7}\\
-\midrule
-akari-7-hard & DFS    & SOLVED  & 0.0271  & 23.9   & 7    & 6\\
-(7$\times$7, seed 70291) & A* & SOLVED & 6.7745 & 977.8 & 3164 & 6\\
-\midrule
-akari-10-easy & DFS   & SOLVED  & 0.5491  & 78.3   & 248  & 11\\
-(10$\times$10, seed 100097) & A* & SOLVED & 3.4994 & 184.6 & 618 & \textbf{10}\\
-\midrule
-akari-10-normal & DFS & SOLVED  & 0.0567  & 47.3   & 13   & 12\\
-(10$\times$10, seed 100194) & A* & SOLVED & 26.6845 & 1697.7 & 5464 & \textbf{9}\\
-\midrule
-akari-10-hard & DFS   & SOLVED  & 0.0776  & 51.9   & 12   & 11\\
-(10$\times$10, seed 100291) & A* & TIMEOUT & 30.0 & 3621.3 & 2401 & ---\\
-\midrule
-akari-14-easy & DFS   & SOLVED  & 0.3751  & 93.1   & 17   & 16\\
-(14$\times$14, seed 140097) & A* & TIMEOUT & 30.1 & 750.9 & 347 & ---\\
-\midrule
-akari-14-normal & DFS & SOLVED  & 0.4228  & 101.5  & 15   & 14\\
-(14$\times$14, seed 140194) & A* & TIMEOUT & 30.1 & 459.8 & 228 & ---\\
-\midrule
-akari-14-hard & DFS   & SOLVED  & 0.3539  & 112.5  & 17   & 16\\
-(14$\times$14, seed 140291) & A* & TIMEOUT & 30.0 & 1189.1 & 363 & ---\\
-\midrule
-akari-25-easy & DFS   & SOLVED  & 6.6833  & 553.1  & 33   & 31\\
-(25$\times$25, seed 250097) & A* & TIMEOUT & 30.3 & 483.1 & 17 & ---\\
-\midrule
-akari-25-normal & DFS & SOLVED  & 9.7177  & 691.5  & 35   & 34\\
-(25$\times$25, seed 250194) & A* & TIMEOUT & 30.1 & 590.0 & 15 & ---\\
-\midrule
-akari-25-hard & DFS   & SOLVED  & 8.0858  & 824.8  & 33   & 32\\
-(25$\times$25, seed 250291) & A* & TIMEOUT & 30.4 & 833.0 & 37 & ---\\
-\bottomrule
-\end{tabular}
-\caption{Light Up --- time, memory, expanded nodes and bulbs per input (median
-of 3 runs, measured 25 October 2026, shared 30-second budget). ``Bulbs'' is
-\code{solution\_cost}; ``---'' marks runs that hit the limit without concluding.
-All 72 runs are stored at \code{docs/benchmarks/2026-10-25-lightup.csv}.}
-\label{tab:lightup-per-input-en}
-\end{table}
-
-\begin{table}[h]
-\centering\small
-\begin{tabular}{@{}lrrr@{}}
-\toprule
-Input & Time (s) & Memory (KiB) & Expanded nodes\\
-\midrule
-akari-10-hard (seed 100291)   & 600.0 & 72{,}003 & 151{,}546\\
-akari-14-easy (seed 140097)   & 600.0 & 16{,}405 & 19{,}638\\
-akari-14-normal (seed 140194) & 600.0 & 16{,}120 & 8{,}634\\
-akari-14-hard (seed 140291)   & 600.0 & 31{,}244 & 9{,}477\\
-akari-25-easy (seed 250097)   & 600.0 & 1{,}868  & 523\\
-akari-25-normal (seed 250194) & 601.8 & 2{,}649  & 425\\
-akari-25-hard (seed 250291)   & 600.2 & 9{,}121  & 1{,}359\\
-\bottomrule
-\end{tabular}
-\caption{Light Up --- A* alone rerun with an extended 600-second budget (one
-run per input) on the seven inputs that exceeded 30 s in
-Table~\ref{tab:lightup-per-input-en}. \textbf{All seven runs still TIMEOUT.}
-Raw data: \code{docs/benchmarks/2026-10-25-lightup-ext.csv}.}
-\label{tab:lightup-ext-en}
-\end{table}
-
-\textbf{Interpreting the results.}
-
+Constraint propagation (CP) repeats until no domain changes:
 \begin{itemize}
-\item \textbf{DFS solves all 12/12 inputs}, expanding very few nodes (7--35 on
-most boards; 248 on 10-easy). The ``first unlit cell'' policy walks each branch
-through the cells in order, and the shared \code{feasible} pruning rejects
-conflicting bulbs early; on clue-rich boards it almost never backtracks ---
-final nodes are only ~1.3$\times$ the bulb count. Time still grows with size
-(0.02\,s at 7$\times$7 to 6.7--9.7\,s at 25$\times$25) mostly due to bitmask and
-feasibility work over $W\approx500$--$600$ white cells, not node count.
-\item \textbf{A* completes only 5/12, but every A* solution is minimum-bulb.}
-On the five inputs both solvers finished, DFS matched the optimum twice
-(7-easy: 7 bulbs; 7-hard: 6) and exceeded it on the other three --- most clearly
-on 10-normal: DFS used 12 bulbs where A* proved 9 suffice (33\% more).
-\item \textbf{A* is 9--250$\times$ slower than DFS} where it finishes (0.27 vs
-0.026\,s; 26.7 vs 0.057\,s). Three cost sources: (i) the heap keeps the whole
-frontier instead of one branch; (ii) every expansion recomputes three lower
-bounds over bitmasks; (iii) the \code{best\_g} table fights rediscovery. A*'s
-node counts are also far higher (70--5464 vs 7--13): $f$-ordering makes A*
-process states DFS would never generate.
-\item \textbf{Memory: A* uses 2--40$\times$ more than DFS} where it finishes,
-peaking at 3621\,KiB on 10-hard before TIMEOUT --- the frontier grows exactly as
-theory predicts. Notably at 25$\times$25 A*'s memory (483--833\,KiB) stays below
-DFS's (553--825\,KiB): A* expands so slowly (15--37 nodes in 30 s, nearly a
-second per expansion on ~500-bit masks) that it never accumulates a large
-frontier, while DFS runs deep for 6--10 seconds with an accumulated visited set.
-\item \textbf{TIMEOUT is not unsolvability --- and not an artifact of a
-too-small 30-second budget.} We reran A* on all seven inputs with a 600-second
-budget (Table~\ref{tab:lightup-ext-en}): \emph{all seven still failed to
-finish}. On 10-hard alone, A* expanded 151,546 states and retained a
-$\sim$70 MiB traced peak within 600 seconds while the frontier kept growing;
-on the 25$\times$25 boards the per-expansion cost ($\sim$1--2 s over $\sim$500
-bitmasks) means ten minutes reach only 425--1,359 states. TIMEOUT is therefore
-a genuine resource-exhaustion outcome matching A*'s theoretical exponential
-behavior; no run ended UNSOLVABLE (every board has a generator witness).
+\item A satisfied wall forbids its undecided neighbors. A wall whose deficit
+equals its available neighbors forces bulbs at all those neighbors.
+\item A dark cell with one legal illuminator forces that bulb. Each new bulb
+also forbids other bulbs along its illuminated lines.
+\item Diagonal deductions forbid positions that would leave too few available
+neighbors for a wall; a contradiction rejects the branch.
 \end{itemize}
+After CP, MRV (Minimum Remaining Values) selects the constraint with the fewest
+choices: $\binom{u}{r}$ combinations for a wall with $u$ available neighbors and
+deficit $r$, or the legal-illuminator count for a dark cell. Walls win ties.
+Conflicting combinations are discarded; values are tried by decreasing gain
+in illuminated dark cells.
+\begin{lstlisting}
+BACKTRACK_MRV_CP(state):
+  check budgets; propagate until no change
+  if contradiction: return failure
+  if goal: return solution
+  choose constraint with fewest remaining choices
+  for choice ordered by lighting gain:
+    child = apply choice to current checkpoint
+    result = BACKTRACK_MRV_CP(child)
+    if solved or limited: return result
+    restore parent checkpoint before next choice
+  return failure
+\end{lstlisting}
+The pseudocode expresses the backtracking flow; the code uses explicit stack
+frames. A checkpoint restores both bulbs and legal domains. The function
+\code{backtracking\_mrv\_cp} propagates at the root as well as after each choice
+and stops at the first solution. Neither DFS nor CSP guarantees minimum bulb
+count; A* remains in the application but is outside this comparison. A CSP
+node can contain several forced bulbs, so nodes are not equal units of work:
+the benchmark measures the combined MRV, CP and value-ordering implementation.
 
-A note on reading the 26.68 s A* figure on 10-normal: all three repeats gave
-25.4--28.0 s with \emph{exactly} 5,464 expanded nodes (the search is
-deterministic), so this is real solve time, not measurement noise. A*'s
-per-node cost on 10$\times$10 boards is a stable $\approx$5 ms (10-easy: 3.5 s
-for 618 nodes); 10-normal is slow simply because it must expand $\approx$8.8$
-\times$ more nodes --- fewer clues than 10-easy weaken the lower bounds and
-widen the frontier. It sits just under the 30-second budget, while 10-hard
-(fewer clues still) crosses it.
+\subsection{Demonstration and experimental protocol}
+The interface supports manual play or solver selection, Start Search,
+Pause/Resume and arrow-based history review at 2/8/30 steps per second. CSP
+shows each deduction, marks forbidden cells with $\times$ and restores states
+on backtracking. A separate worker keeps the UI responsive. Visualization
+disables the timeout while retaining node/memory limits; benchmarks disable
+trace/animation and retain all three limits.
 
-\subsection{Limitations}
+The 31 October 2026 experiment uses 4 sizes $\times$ 3 levels $\times$ 5 distinct
+seeds: 60 boards and 120 DFS/CSP measurements. Each board is run once per solver;
+all runs are sequential in fresh processes, alternating solver order across
+successive seeds. Both solvers use these seed ranges:
+\begin{center}\small
+\begin{tabular}{@{}rlll@{}}\toprule
+Size & easy & normal & hard\\\midrule
+7 & 70097--70101 & 70194--70198 & 70291--70295\\
+10 & 100097--100101 & 100194--100198 & 100291--100295\\
+14 & 140097--140101 & 140194--140198 & 140291--140295\\
+25 & 250097--250101 & 250194--250198 & 250291--250295\\
+\bottomrule\end{tabular}
+\end{center}
 
-Difficulty labels come from wall density rather than measured solve times, and
-solution uniqueness is unverified, so no board is claimed to have a unique
-solution. Memory is the tracemalloc peak of Python allocations, not process RSS.
-Stronger lower bounds (for example, matching-based coverage of dark cells) were
-not attempted --- such bounds could push A* further before the timeout ceiling.
+Both solvers receive \textbf{30 s, 500,000 expanded nodes and 512 MiB estimated
+memory}. \code{TIMEOUT}, \code{NODE\_LIMIT}, \code{MEMORY\_LIMIT} and
+\code{UNSOLVABLE} remain distinct; budgets are not automatically extended.
+UNSOLVABLE requires a proven contradiction or exhaustive branch failure,
+rather than reaching a resource limit.
+Runtime is the solver's \code{perf\_counter} elapsed time with \code{tracemalloc}
+active, excluding generation, process startup and external validation. Memory
+is traced peak Python allocation, distinct from RSS and the estimate used to
+stop search. All SOLVED outputs are independently validated. Cooperative
+checkpoint checks can slightly overshoot 30 s.
+
+The raw CSV, summary and manifest record seeds, exact JSON boards, hashes and
+environment under \path{docs/benchmarks/}, with prefix
+\path{2026-10-31-lightup-dfs-csp}. The following tables use this dataset.
+
+\subsection{Measured results}
+\begin{center}\small
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+Algorithm & SOLVED & TIMEOUT & NODE\_LIMIT & MEMORY\_LIMIT\\
+\midrule
+DFS & 52 & 8 & 0 & 0\\
+CSP & 60 & 0 & 0 & 0\\
+\bottomrule
+\end{tabular}
+\end{center}
+\begin{table}[htbp]
+\centering\scriptsize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}rllccrrrr@{}}
+\toprule
+Size & Difficulty & Alg. & Solved & T/N/M & Time (s) & Peak (KiB) & Nodes & Bulbs\\
+\midrule
+7 & easy & DFS & 5/5 & 0/0/0 & 0.0075 & 24.9 & 11 & 9\\
+7 & easy & CSP & 5/5 & 0/0/0 & 0.0066 & 25.2 & 4 & 9\\
+\addlinespace[2pt]
+7 & normal & DFS & 5/5 & 0/0/0 & 0.0066 & 26.8 & 9 & 7\\
+7 & normal & CSP & 5/5 & 0/0/0 & 0.0103 & 29.0 & 6 & 7\\
+\addlinespace[2pt]
+7 & hard & DFS & 5/5 & 0/0/0 & 0.0074 & 27.3 & 8 & 7\\
+7 & hard & CSP & 5/5 & 0/0/0 & 0.0107 & 30.5 & 6 & 6\\
+\addlinespace[2pt]
+10 & easy & DFS & 5/5 & 0/0/0 & 0.0229 & 55.9 & 27 & 15\\
+10 & easy & CSP & 5/5 & 0/0/0 & 0.0288 & 56.2 & 9 & 14\\
+\addlinespace[2pt]
+10 & normal & DFS & 5/5 & 0/0/0 & 0.0218 & 60.0 & 15 & 12\\
+10 & normal & CSP & 5/5 & 0/0/0 & 0.0309 & 61.8 & 8 & 11\\
+\addlinespace[2pt]
+10 & hard & DFS & 5/5 & 0/0/0 & 0.0229 & 62.4 & 12 & 11\\
+10 & hard & CSP & 5/5 & 0/0/0 & 0.0314 & 67.8 & 10 & 10\\
+\addlinespace[2pt]
+14 & easy & DFS & 5/5 & 0/0/0 & 0.2330 & 135.3 & 261 & 28\\
+14 & easy & CSP & 5/5 & 0/0/0 & 0.0801 & 109.1 & 12 & 25\\
+\addlinespace[2pt]
+14 & normal & DFS & 5/5 & 0/0/0 & 0.0724 & 117.3 & 34 & 22\\
+14 & normal & CSP & 5/5 & 0/0/0 & 0.1030 & 123.5 & 17 & 19\\
+\addlinespace[2pt]
+14 & hard & DFS & 5/5 & 0/0/0 & 0.0832 & 126.1 & 22 & 19\\
+14 & hard & CSP & 5/5 & 0/0/0 & 0.1168 & 134.6 & 15 & 16\\
+\addlinespace[2pt]
+25 & easy & DFS & 2/5 & 3/0/0 & 30.0001 & 2237.0 & 9\,328 & 73\\
+25 & easy & CSP & 5/5 & 0/0/0 & 0.9558 & 562.1 & 31 & 68\\
+\addlinespace[2pt]
+25 & normal & DFS & 1/5 & 4/0/0 & 30.0004 & 3583.3 & 13\,886 & 58\\
+25 & normal & CSP & 5/5 & 0/0/0 & 1.0274 & 696.9 & 33 & 52\\
+\addlinespace[2pt]
+25 & hard & DFS & 4/5 & 1/0/0 & 0.7835 & 870.3 & 46 & 40.5\\
+25 & hard & CSP & 5/5 & 0/0/0 & 1.0421 & 868.0 & 34 & 35\\
+\addlinespace[2pt]
+\bottomrule
+\end{tabular}
+\caption{Medians across five distinct seeds per configuration. T/N/M count TIMEOUT, NODE\_LIMIT and MEMORY\_LIMIT separately. Attempt time includes stopped runs, not their completion times. Bulbs is the median bulb count over SOLVED runs only; the Solved column gives its sample count.}
+\label{tab:lightup-dfs-csp-en}
+\end{table}
+Time, memory and node medians include all five attempts, including limited
+runs. Bulbs includes SOLVED runs only, with sample counts in the Solved column;
+a TIMEOUT is not zero bulbs. Different solved counts can mean different seed
+subsets. The summary also reports solved-only time medians.
+
+\textbf{Evaluation.} DFS solves \textbf{52/60} boards and CSP \textbf{60/60}; all
+eight TIMEOUT runs belong to DFS. No run reaches NODE\_LIMIT or MEMORY\_LIMIT,
+but both caps remain enabled. Among 52 jointly solved pairs, CSP is faster on
+15 and the median $t_{DFS}/t_{CSP}=0.73$; CSP is therefore not uniformly faster.
+Small well-pruned boards can favor DFS because CP costs more per node, while
+CSP improves coverage of larger branching cases within the same budgets.
+Bulb counts describe the returned solutions, not proven optima. Historical
+25 October DFS/A* results use the older generator and are not pooled here.
+
+Five seeds per configuration are a small sample; wall-density difficulty is
+not calibrated and uniqueness is unchecked. Next steps are broader inputs,
+unsolvable boards, CP/MRV ablations and uninstrumented timing runs.
