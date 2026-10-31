@@ -64,7 +64,7 @@ exactly its count of immediately adjacent bulbs above, below, left and right
 | Play manually / Solve | Switch between manual mode and the solver |
 | DFS / A* / CSP (MRV + CP) | Select the algorithm (A* returns a minimum-bulb solution) |
 | Start Search / Resume Search, Pause, Reset | Start or resume search, pause it, or stop and clear the board |
-| Compare DFS and A* | Run both solvers on the current puzzle once |
+| Compare DFS and CSP | Run both solvers on the current puzzle once |
 | `<` / `>` | Pause and review search states; `>` advances the paused worker at the latest state. After solving, review solution placements |
 | Speed: 2 / 8 / 30 steps/s | Cycle playback speed; default is 8 steps/s |
 

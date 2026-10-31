@@ -1,0 +1,370 @@
+% Compile: tectonic slides/submission.tex --outdir output/final
+\documentclass[aspectratio=169,11pt]{beamer}
+\usepackage{fontspec,amsmath,amssymb,booktabs,tikz,listings,etoolbox,graphicx}
+\IfFontExistsTF{Arial}{\setsansfont{Arial}}{\setsansfont{lmsans10-regular.otf}[BoldFont=lmsans10-bold.otf,ItalicFont=lmsans10-oblique.otf]}
+\setmonofont{lmmono10-regular.otf}[Scale=.9]
+\usetikzlibrary{arrows.meta,positioning,calc}
+\input{../report/metadata.tex}
+\usetheme{HCMUT}
+\definecolor{ink}{HTML}{25282D}
+\definecolor{water}{HTML}{258BD2}
+\definecolor{muted}{HTML}{637284}
+\lstset{basicstyle=\ttfamily\footnotesize,columns=fullflexible,keepspaces=true,
+showstringspaces=false,breaklines=true,keywordstyle=\color{HCMUTblue},
+morekeywords={if,for,while,return,in,or},aboveskip=3pt,belowskip=3pt}
+\newcommand{\slidenote}[1]{\par\vspace{2mm}{\scriptsize\color{muted}#1\par}}
+\newcommand{\tile}[4]{\begin{scope}[shift={(#1,#2)}]
+\draw[black!20](-.5,-.5)rectangle(.5,.5);
+\foreach \bit/\dx/\dy in {1/0/.5,2/.5/0,4/0/-.5,8/-.5/0}{
+\pgfmathtruncatemacro{\hasport}{mod(floor(#3/\bit),2)}
+\ifnum\hasport=1\draw[#4,line width=3.6pt,line cap=round](0,0)--(\dx,\dy);\fi}
+\end{scope}}
+\newcommand{\board}[2]{\foreach \mask[count=\idx from 0] in {#1}{
+\pgfmathtruncatemacro{\col}{mod(\idx,4)}\pgfmathtruncatemacro{\row}{-floor(\idx/4)}
+\tile{\col}{\row}{\mask}{#2}}\fill[white](2,-2)circle(.16);\fill[HCMUTblue](2,-2)circle(.11);}
+\hypersetup{pdftitle={BTL1: Pipes va Light Up},pdfsubject={Tim kiem - CO3061}}
+\begin{document}
+
+\begin{frame}[plain]
+\begin{columns}[c,onlytextwidth]
+\column{.18\textwidth}\centering\includegraphics[height=18mm]{../report/assets/hcmut-logo.png}
+\column{.79\textwidth}\small\color{HCMUTblue}
+ĐẠI HỌC QUỐC GIA THÀNH PHỐ HỒ CHÍ MINH\par
+TRƯỜNG ĐẠI HỌC BÁCH KHOA\par
+KHOA KHOA HỌC VÀ KỸ THUẬT MÁY TÍNH
+\end{columns}
+\vspace{5mm}{\color{HCMUTblue}\hrule}\vspace{5mm}
+{\Large\bfseries BÀI TẬP LỚN 1: TÌM KIẾM\par}
+\vspace{3mm}{\LARGE\bfseries Pipes và Light Up\par}
+\vspace{3mm}Nhập môn Trí tuệ nhân tạo (\CourseCode)\par
+{\small Học kỳ 1, năm học 2026--2027\par}
+\vspace{3mm}
+\ifdefempty{\InstructorName}{}{\small Giảng viên: \InstructorName\par}
+\ifdefempty{\ClassName}{}{\small Lớp: \ClassName\par}
+\ifdefempty{\StudentRows}{}{\small\begin{tabular}{@{}ll@{}}\StudentRows\end{tabular}}
+\end{frame}
+
+\begin{frame}{Nội dung}
+\begin{columns}[T,onlytextwidth]
+\column{.49\textwidth}\tableofcontents[sections={1}]
+\column{.49\textwidth}\tableofcontents[sections={2}]
+\end{columns}
+\vspace{3mm}\small Mỗi game: một giải thuật mù, một giải thuật heuristic, demo từng bước và bảng đo thời gian/bộ nhớ.
+\end{frame}
+
+\section{Pipes}
+\subsection{Giới thiệu}
+\begin{frame}{Giới thiệu}
+\begin{columns}[c,onlytextwidth]
+\column{.39\textwidth}\centering
+\begin{tikzpicture}[scale=.85]
+\board{2,12,2,12,4,5,4,5,7,11,15,13,3,8,1,1}{water}
+\end{tikzpicture}
+\slidenote{Một nghiệm của pipes-4x4-261.}
+\column{.57\textwidth}
+\begin{itemize}
+\item Xoay từng ống; hình dạng ống giữ nguyên.
+\item Các cổng phải khớp nhau, không mở ra ngoài biên.
+\item Mọi ô nối thành một mạng, không có chu trình.
+\end{itemize}
+\vspace{3mm}\textbf{Hai giải thuật:} DFS và Greedy Best-First.
+\end{columns}
+\end{frame}
+
+\subsection{Phát biểu bài toán tìm kiếm}
+\begin{frame}{Phát biểu bài toán tìm kiếm}
+\small\begin{tabular}{@{}p{.22\textwidth}p{.73\textwidth}@{}}\toprule
+Thành phần & Biểu diễn\\\midrule
+Trạng thái & $s=(a_0,\ldots,a_{k-1})$: hướng đã gán cho $k$ ô đầu\\
+Ban đầu & $()$, chưa gán hướng cho ô nào\\
+Hành động & Gán một hướng cho ô $k$, theo thứ tự hàng--cột\\
+Đích & Gán đủ $n=m^2$ ô và mạng thỏa luật\\
+Không gian & $\prod_i |R_i|\leq4^n$ cấu hình trước kiểm tra ràng buộc\\\bottomrule
+\end{tabular}
+\vspace{3mm}\par
+Ống thẳng có 2 hướng; chữ thập có 1; các hình còn lại có 4.\par
+Giải thuật gán thẳng hướng cuối cho một ô (bằng 0--3 lần nhấp xoay).
+\end{frame}
+
+\subsection{Tạo dữ liệu đầu vào}
+\begin{frame}{Tạo dữ liệu đầu vào}
+\begin{center}\begin{tikzpicture}[node distance=5mm,
+box/.style={draw=HCMUTblue,align=center,font=\small,minimum height=9mm}]
+\node[box,text width=38mm](a){Sinh mạng cây trên lưới};
+\node[box,text width=35mm,right=of a](b){Xoay ngẫu nhiên từng ống};
+\node[box,text width=33mm,right=of b](c){Lưu bản đồ JSON};
+\draw[-{Stealth}](a)--(b);\draw[-{Stealth}](b)--(c);
+\end{tikzpicture}\end{center}
+\begin{itemize}
+\item 9 bản: $4\times4$, $5\times5$, $7\times7$; mỗi cỡ 3 seed.
+\item JSON lưu kích thước, nguồn và ma trận cổng N/E/S/W.
+\item Mạng cây bảo đảm có nghiệm; solver không đọc đáp án lúc sinh.
+\end{itemize}
+\slidenote{Luật và dạng ống lấy theo puzzle-pipes.com; bàn do chương trình tự sinh.}
+\end{frame}
+
+\subsection{Giải thuật tìm kiếm mù}
+\begin{frame}[fragile]{Giải thuật tìm kiếm mù: DFS}
+\begin{columns}[T,onlytextwidth]
+\column{.57\textwidth}
+\begin{lstlisting}
+DFS(s):
+  if limit reached: return LIMIT
+  if GOAL(s): return SOLVED(s)
+  for a in rotations of tile |s|:
+    child = s + (a)
+    if FEASIBLE(child):
+      result = DFS(child)
+      if solved or limited:
+        return result
+  return UNSOLVABLE
+\end{lstlisting}
+\column{.39\textwidth}\small
+Đi sâu theo thứ tự cố định; bế tắc thì quay lui.\par\vspace{2mm}
+\textbf{Cắt tỉa dùng chung:}
+\begin{itemize}
+\item Cổng vượt biên.
+\item Không khớp ô đã gán.
+\item Đã tạo chu trình.
+\item Không thể nối hết ô.
+\end{itemize}
+\end{columns}
+\slidenote{Kiểm tra ở gốc: tổng số cổng phải bằng $2(n-1)$ vì mạng là một cây.}
+\end{frame}
+
+\subsection{Giải thuật tìm kiếm heuristic}
+\begin{frame}[fragile]{Giải thuật tìm kiếm heuristic: Greedy Best-First}
+\[h(s)=\sum_{i\text{ chưa gán}}\log_2|D_i(s)|\]
+\small $D_i(s)$ là miền hướng còn lại của ô $i$. Ưu tiên $h$ nhỏ hơn.\par
+Ví dụ: miền $(1,2,4)$ cho $h=3$; miền $(1,1,2)$ cho $h=1$.
+\begin{lstlisting}
+push root into min-heap
+while heap not empty:
+  s = pop state with lowest priority
+  if GOAL(s): return SOLVED(s)
+  for child in feasible successors(s):
+    push (h(child), -depth(child), serial, child)
+return UNSOLVABLE
+\end{lstlisting}
+\slidenote{Cùng thứ tự ô và cắt tỉa với DFS; chỉ khác thứ tự lấy trạng thái ra. Hòa $h$ thì chọn trạng thái sâu hơn.}
+\end{frame}
+
+\subsection{Hiện thực và minh họa từng bước}
+\begin{frame}{Hiện thực và minh họa từng bước}
+\begin{columns}[c,onlytextwidth]
+\column{.37\textwidth}\centering
+\begin{tikzpicture}[scale=.77]
+\board{2,9,1,6,4,5,1,10,14,13,15,7,6,4,2,4}{muted}
+\draw[HCMUTblue,line width=1.3pt](.5,.5)rectangle(1.5,-.5);
+\end{tikzpicture}
+\column{.59\textwidth}\small
+Ví dụ bước gán ô thứ hai:
+\begin{enumerate}
+\item Ô đầu có cổng Đông.
+\item Thử ES ở ô kế: thiếu cổng Tây $\Rightarrow$ loại.
+\item Thử SW: khớp ô đầu $\Rightarrow$ đi tiếp.
+\end{enumerate}
+\vspace{2mm}Trên game: chọn DFS/Greedy, dùng Run, Pause, Next; xem lý do loại nhánh và Show solution.
+\end{columns}
+\slidenote{Python 3, pygame-ce. Luật ở model.py; giải thuật ở search.py; giao diện ở app.py.}
+\end{frame}
+
+\subsection{Kết quả thực nghiệm}
+\begin{frame}{Kết quả thực nghiệm}
+\input{results-table.tex}
+\small 9 bản $\times$ 2 giải thuật $\times$ 5 lần lặp = 90 lượt, đều giải được.\par
+Giới hạn mỗi lượt: 30 giây và 200.000 lần mở rộng.
+\slidenote{Trung vị theo cỡ bàn. Thời gian đo không vẽ giao diện; bộ nhớ là đỉnh cấp phát Python (tracemalloc). Bảng từng bàn trong báo cáo.}
+\end{frame}
+
+\subsection{Nhận xét}
+\begin{frame}{Nhận xét}
+\begin{itemize}
+\item Hai giải thuật nhanh gần bằng nhau; DFS nhỉnh hơn ở $5\times5$ và $7\times7$.
+\item Lý do: cắt tỉa đã loại gần hết hướng sai, DFS gần như đi thẳng tới nghiệm. Greedy còn tốn thời gian tính $h$ và thao tác heap.
+\item Greedy dùng ít bộ nhớ hơn 2--5 lần: heap rất nhỏ, còn DFS giữ bản sao trạng thái ở mỗi mức.
+\end{itemize}
+\vspace{3mm}\textbf{Hạn chế:} mới có 9 bàn khá dễ, chưa có bàn vô nghiệm trong bảng đo.
+\end{frame}
+
+\section{Light Up (Akari)}
+\subsection{Giới thiệu}
+\begin{frame}{Giới thiệu}
+\begin{columns}[c,onlytextwidth]
+\column{.36\textwidth}\centering\input{lightup-board.tex}
+\column{.60\textwidth}\begin{itemize}
+\item Đặt bóng trên ô trắng, chiếu theo hàng/cột đến tường.
+\item Mọi ô trắng phải sáng.
+\item Hai bóng không nhìn thấy nhau.
+\item Tường số có đúng số bóng kề trực tiếp.
+\end{itemize}\vspace{3mm}
+\textbf{Hai giải thuật:} DFS và CSP (backtracking + MRV + CP).
+\end{columns}
+\slidenote{Luật theo Nikoli. Hình: bàn $7\times7$ seed 70097 và lời giải CSP tìm được.}
+\end{frame}
+
+\subsection{Phát biểu bài toán tìm kiếm}
+\begin{frame}{Phát biểu bài toán tìm kiếm}
+\small\begin{tabular}{@{}p{.22\textwidth}p{.73\textwidth}@{}}\toprule
+Thành phần & Biểu diễn\\\midrule
+Trạng thái & Tập bóng, ô sáng và vị trí còn hợp lệ (bitmask)\\
+Ban đầu & Chưa có bóng; CSP có thể suy ra bóng ngay tại gốc\\
+Hành động & Đặt bóng; CSP có thể chọn một tổ hợp quanh tường\\
+Đích & Sáng hết ô trắng, không xung đột, mọi số trên tường đúng\\
+Không gian & $2^W$ tập bóng trước ràng buộc, với $W$ ô trắng\\\bottomrule
+\end{tabular}
+\vspace{3mm}\par
+Một nút CSP có thể đặt nhiều bóng cùng lúc nhờ suy luận.\par
+Cả hai tìm lời giải đầu tiên, không tối ưu số bóng.
+\end{frame}
+
+\subsection{Tạo dữ liệu đầu vào}
+\begin{frame}{Tạo dữ liệu đầu vào}
+\begin{enumerate}
+\item Dùng seed chọn vị trí tường.
+\item Đặt bóng làm chứng đến khi mọi ô trắng sáng.
+\item Suy ra số trên tường; giữ một phần tường không số.
+\item Kiểm chứng lời giải làm chứng trước khi trả bàn.
+\end{enumerate}
+\vspace{3mm}\small
+4 cỡ: $7,10,14,25$; 3 nhãn; 5 seed khác nhau mỗi cấu hình.\par
+Tổng cộng \textbf{60 bản}, mỗi bản dùng chung cho hai giải thuật.
+\slidenote{easy/normal/hard khác nhau ở tỉ lệ tường: 16\%, 10.5\%, 5.5\%. Solver không biết lời giải mẫu.}
+\end{frame}
+
+\subsection{Giải thuật tìm kiếm mù}
+\begin{frame}[fragile]{Giải thuật tìm kiếm mù: DFS}
+\begin{lstlisting}
+DFS(state):
+  if limit reached: return LIMIT
+  if GOAL(state): return SOLVED
+  target = first dark cell in row-major order
+  for bulb in legal illuminators(target):
+    child = place(bulb)
+    if FEASIBLE(child):
+      result = DFS(child)
+      if solved or limited: return result
+    exclude bulb from later sibling choices
+  return UNSOLVABLE
+\end{lstlisting}
+\small Đi sâu theo thứ tự cố định. Loại nhánh nếu tường không đủ chỗ hoặc ô tối không còn nguồn chiếu.
+\slidenote{Trong code, đệ quy được thay bằng stack tường minh.}
+\end{frame}
+
+\subsection{Giải thuật tìm kiếm heuristic}
+\begin{frame}{Giải thuật tìm kiếm heuristic: MRV và CP}
+\begin{columns}[c,onlytextwidth]
+\column{.34\textwidth}\centering
+\begin{tikzpicture}[scale=.8]
+\foreach \x/\y in {-1/0,1/0,0/1,0/-1}{\draw[muted!50](\x-.45,\y-.45)rectangle(\x+.45,\y+.45);}
+\fill[ink](-.45,-.45)rectangle(.45,.45);\node[white]at(0,0){2};
+\fill[orange!85](-1,0)circle(.23);\fill[orange!85](1,0)circle(.23);
+\node[muted]at(0,1){$\times$};\node[muted]at(0,-1){$\times$};
+\end{tikzpicture}\slidenote{Tường đủ 2 bóng: cấm hai ô kề còn lại.}
+\column{.62\textwidth}\small
+\textbf{CP: lan truyền quyết định bắt buộc}
+\begin{itemize}
+\item Tường thiếu $r$ bóng, còn đúng $r$ ô: đặt tất cả.
+\item Ô tối còn một nguồn chiếu: đặt bóng tại nguồn đó.
+\item Bóng mới cấm các vị trí nhìn thấy nhau.
+\end{itemize}
+\vspace{2mm}Lặp đến khi không đổi; mâu thuẫn thì quay lui.
+\end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{Giải thuật tìm kiếm heuristic: chọn nhánh bằng MRV}
+\small Chọn ràng buộc ít lựa chọn nhất: đếm nguồn chiếu của ô tối,
+hoặc $\binom{u}{r}$ tổ hợp quanh tường còn $u$ ô và thiếu $r$ bóng.
+\begin{lstlisting}
+BACKTRACK(state):
+  check limits; propagate until no change
+  if contradiction: return failure
+  if GOAL(state): return SOLVED
+  select constraint by MRV
+  for choice ordered by lighting gain:
+    result = BACKTRACK(apply(choice, checkpoint))
+    if solved or limited: return result
+    restore checkpoint
+  return failure
+\end{lstlisting}
+\slidenote{Bằng điểm thì ưu tiên tường. Lựa chọn chiếu sáng thêm nhiều ô được thử trước.}
+\end{frame}
+
+\subsection{Hiện thực và minh họa từng bước}
+\begin{frame}{Hiện thực và minh họa từng bước}
+\begin{enumerate}
+\item Chọn DFS hoặc CSP, bấm Start Search.
+\item Pause và hai mũi tên để đi tới/lui từng bước.
+\item CSP hiện thêm bóng suy ra, ô bị cấm $\times$ và lúc quay lui.
+\item Compare DFS and CSP: chạy cả hai trên bàn đang mở.
+\end{enumerate}
+\vspace{3mm}\small
+Solver chạy trong worker riêng; giao diện nhận từng sự kiện để vẽ.
+\slidenote{Python 3, pygame-ce. Luật ở core/, giải thuật ở algorithms/search.py, giao diện ở ui/app.py.}
+\end{frame}
+
+\subsection{Kết quả thực nghiệm}
+\begin{frame}{Kết quả thực nghiệm: số bản giải được}
+\centering\small\begin{tabular}{@{}lrrrr@{}}\toprule
+ & \multicolumn{2}{c}{DFS} & \multicolumn{2}{c}{CSP}\\
+Cỡ & Giải được & TIMEOUT & Giải được & TIMEOUT\\\midrule
+$7\times7$ & 15/15 & 0 & 15/15 & 0\\
+$10\times10$ & 15/15 & 0 & 15/15 & 0\\
+$14\times14$ & 15/15 & 0 & 15/15 & 0\\
+$25\times25$ & 7/15 & 8 & 15/15 & 0\\\midrule
+Tổng & 52/60 & 8 & 60/60 & 0\\\bottomrule
+\end{tabular}\par\vspace{3mm}
+\raggedright 60 bản $\times$ 2 giải thuật = 120 lượt. Mỗi bản đo một lần mỗi giải thuật.\par
+Giới hạn: 30 giây, 500.000 node, 512 MiB ước lượng.
+\slidenote{Mỗi lượt chạy trong process mới. Không lượt nào chạm giới hạn nút hoặc bộ nhớ.}
+\end{frame}
+
+\begin{frame}{Kết quả thực nghiệm: thời gian và bộ nhớ}
+\centering\small
+\begin{tabular}{@{}llrrr@{}}\toprule
+Input (cỡ/nhãn) & Giải thuật & Giải được & Giây & KiB\\\midrule
+14 / easy & DFS & 5/5 & 0.2330 & 135.3\\
+          & CSP & 5/5 & 0.0801 & 109.1\\
+25 / easy & DFS & 2/5 & 30.0001 & 2237.0\\
+          & CSP & 5/5 & 0.9558 & 562.1\\
+25 / normal & DFS & 1/5 & 30.0004 & 3583.3\\
+            & CSP & 5/5 & 1.0274 & 696.9\\
+25 / hard & DFS & 4/5 & 0.7835 & 870.3\\
+          & CSP & 5/5 & 1.0421 & 868.0\\\bottomrule
+\end{tabular}\par\vspace{2mm}
+\raggedright\scriptsize Trung vị 5 seed, tính cả lượt TIMEOUT (30 giây là lúc bị dừng). Bàn 7 và 10: hai giải thuật đều dưới 0.04 giây. Bảng đầy đủ trong báo cáo.
+\end{frame}
+
+\subsection{Nhận xét}
+\begin{frame}{Nhận xét}
+\begin{itemize}
+\item CSP giải đủ 60/60 bàn, DFS 52/60; 8 lượt TIMEOUT đều ở bàn $25\times25$.
+\item Bàn lớn: DFS mở hàng nghìn nút, CSP chỉ khoảng 30 nút nhờ suy ra bóng bắt buộc.
+\item Bàn nhỏ: DFS lại nhanh hơn (37/52 bàn) vì CSP tốn công suy luận ở mỗi nút.
+\end{itemize}
+\vspace{3mm}\textbf{Hạn chế:} mỗi cấu hình mới 5 seed; nhãn độ khó chỉ dựa trên số tường; chưa đo riêng tác dụng MRV và CP.
+\end{frame}
+
+\HCMUTgamefalse
+\begin{frame}{Kết luận}
+\begin{itemize}
+\item Hai game viết bằng Python 3, có chơi tay và xem giải thuật chạy từng bước.
+\item Pipes: DFS và Greedy giải hết 9 bàn, tốc độ gần như nhau.
+\item Light Up: CSP giải 60/60, DFS 52/60; CSP vượt trội ở bàn lớn.
+\item Heuristic có ích khi không gian tìm kiếm lớn; ở bài dễ, chi phí tính heuristic có thể lấn phần tiết kiệm được.
+\end{itemize}
+\vspace{3mm}\textbf{Hướng tiếp theo:} thêm bàn khó và vô nghiệm, đo nhiều seed hơn, đo riêng tác dụng từng kỹ thuật.
+\end{frame}
+
+\begin{frame}{Tài liệu tham khảo}
+\small
+\begin{enumerate}
+\item Luật Pipes: \url{https://www.puzzle-pipes.com/}.
+\item Luật Akari: \url{https://www.nikoli.co.jp/en/puzzles/akari/}.
+\item Russell và Norvig, \emph{Artificial Intelligence: A Modern Approach}, chương 3 và 6.
+\item Bram Pulles (2021), \emph{Analysis of Akari}, mục 4.1.1 và 4.1.3.
+\item Victor Dekker (2015), \emph{A Difficulty Measure for Light Up Puzzles}.
+\end{enumerate}
+\slidenote{Danh sách đầy đủ trong báo cáo.}
+\end{frame}
+\end{document}

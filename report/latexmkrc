@@ -1,0 +1,3 @@
+# Overleaf: select XeLaTeX. Local latexmk also uses XeLaTeX by default.
+$pdf_mode = 5;
+$xelatex = 'xelatex -interaction=nonstopmode -halt-on-error %O %S';

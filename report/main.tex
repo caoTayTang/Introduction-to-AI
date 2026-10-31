@@ -1,0 +1,51 @@
+\documentclass[a4paper,12pt]{article}
+\input{preamble.tex}
+\input{metadata.tex}
+\hypersetup{pdftitle={Báo cáo BTL1: Tìm kiếm trong trò chơi Pipes},
+  pdfsubject={Introduction to AI: DFS và Greedy Best-First Search}}
+\begin{document}
+\hypersetup{pageanchor=false}
+\begin{titlepage}
+\centering
+\vspace*{10mm}
+{\large ĐẠI HỌC QUỐC GIA THÀNH PHỐ HỒ CHÍ MINH\\[2mm]
+TRƯỜNG ĐẠI HỌC BÁCH KHOA\\[2mm]
+KHOA KHOA HỌC VÀ KỸ THUẬT MÁY TÍNH\par}
+\vspace{10mm}
+\includegraphics[height=30mm]{assets/hcmut-logo.png}\par
+\vspace{18mm}
+{\Large\bfseries INTRODUCTION TO\\[2mm]
+ARTIFICIAL INTELLIGENCE (\CourseCode)\par}
+\vspace{6mm}\hrule\vspace{5mm}
+{\Large\bfseries BÁO CÁO BÀI TẬP LỚN 1\par}
+\vspace{5mm}{\Large\bfseries TÌM KIẾM (SEARCHING)\par}
+\vspace{4mm}{\large Chuyên đề: Trò chơi Pipes\par}
+\vspace{5mm}\hrule
+\vspace{10mm}
+\begin{minipage}{.76\textwidth}
+\raggedright
+\ifdefempty{\InstructorName}{}{\textbf{Giảng viên:} \InstructorName\par}
+\ifdefempty{\ClassName}{}{\textbf{Lớp:} \ClassName\par}
+\ifdefempty{\StudentRows}{%
+\textbf{Sinh viên thực hiện:}\par\vspace{2mm}
+\rule{.9\linewidth}{.2pt}\par\vspace{4mm}
+\rule{.9\linewidth}{.2pt}\par
+}{%
+\textbf{Sinh viên thực hiện:}\par\vspace{2mm}
+\begin{tabular}{@{}ll@{}}\StudentRows\end{tabular}
+}
+\end{minipage}
+\vfill
+{\normalsize THÀNH PHỐ HỒ CHÍ MINH, \ReportMonth\par}
+\vspace{7mm}
+\end{titlepage}
+\pagenumbering{arabic}
+\hypersetup{pageanchor=true}
+\tableofcontents
+\clearpage
+\input{chapters/pipes.tex}
+\clearpage
+\input{references.tex}
+\clearpage
+\input{appendix.tex}
+\end{document}

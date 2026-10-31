@@ -1,0 +1,48 @@
+\appendix
+\section{Tái lập và đối chiếu hiện thực}
+
+Từ thư mục gốc của dự án, thực hiện các lệnh sau. Cần Python 3.13 và uv;
+phiên bản phụ thuộc được khóa trong \code{uv.lock}.
+\begin{lstlisting}[numbers=none,basicstyle=\ttfamily\footnotesize]
+uv sync --frozen
+uv run main.py
+uv run python -m unittest discover -s pipes_problem -t .
+uv run python -m pipes_problem.benchmark
+\end{lstlisting}
+
+Thí nghiệm mới tạo thư mục dưới \code{results/}, có tên bắt đầu bằng
+\code{benchmark-} và mốc thời gian. Mỗi thư mục gồm \code{benchmark.csv},
+\code{manifest.json} và \code{summary.md}. Các giá trị
+thời gian mới có thể thay đổi theo máy. Bảng trong báo cáo này lấy từ bằng
+chứng đã lưu ngày 22/10/2026, không tự động thay bằng kết quả mới.
+
+\begin{table}[H]\centering\small
+\begin{tabularx}{\textwidth}{@{}lX@{}}\toprule
+Cột CSV & Ý nghĩa \\\midrule
+\code{puzzle_id} & Tên bản đồ không có đuôi .json.\\
+\code{grid_size} & Số ô trên một cạnh.\\
+\code{algorithm} & \code{dfs} hoặc \code{greedy_best_first}.\\
+\code{seed} & Seed của thuật toán ngẫu nhiên; trống với hai thuật toán hiện tại.\\
+\code{status} & solved, unsolvable, limit\_reached, cancelled hoặc error.\\
+\code{time_ms} & Thời gian tính toán được đo theo mili giây.\\
+\code{peak_memory_kib} & Đỉnh cấp phát Python, để trống khi không đo được.\\\bottomrule
+\end{tabularx}
+\caption{Bảy cột lưu tự động; tham số và số mở rộng nằm trong manifest.}
+\end{table}
+
+\begin{table}[H]\centering\small
+\begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}p{.41\textwidth}>{\raggedright\arraybackslash}X@{}}\toprule
+Thành phần & Vị trí trong mã nguồn \\\midrule
+Trạng thái, sinh hướng và cắt tỉa & \code{Search}, \code{orientations()}, \code{compatible()} trong \code{search.py}.\\
+DFS và GBFS & \code{Search.dfs()} và \code{Search.greedy()}.\\
+Kiểm tra đích & \code{inspect_board()} trong \code{model.py}, \code{validate_solution()} trong \code{search.py}.\\
+Thời gian và bộ nhớ & \code{solve()}, \code{measure()} và \code{worker.py}.\\
+Giao diện và sự kiện & \code{advance_search()}, \code{draw_board()} và \code{draw_sidebar()} trong \code{app.py}.\\
+Thực nghiệm lô & \code{benchmark.py} và \code{benchmark.json}.\\\bottomrule
+\end{tabularx}
+\caption{Đối chiếu nội dung báo cáo với hiện thực.}
+\end{table}
+
+Mỗi manifest lưu chính xác bản đồ, hash, môi trường, cấu hình, số lần lặp và
+số mở rộng. Hash nguồn của lô dùng trong báo cáo là:\par
+{\footnotesize\ttfamily\nolinkurl{4a9c58c27c2c8a0ad3d9e30ce02742b057c23d2c0fcdefef6774a6fa9ca8d93f}}.

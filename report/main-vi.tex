@@ -1,191 +1,84 @@
 % Báo cáo BTL1 — Nhập môn Trí tuệ nhân tạo — bản tiếng Việt.
 % Dựng PDF: tectonic report/main-vi.tex
 \documentclass[12pt,a4paper]{article}
-\usepackage{fontspec}
-\usepackage{polyglossia}
-\setmainlanguage{vietnamese}
-\setotherlanguage{english}
-\setmainfont{Liberation Serif}
-\setsansfont{Liberation Sans}
-\setmonofont{DejaVu Sans Mono}[Scale=0.88]
-\usepackage{amsmath,amssymb}
-\usepackage{booktabs}
-\usepackage[margin=2.4cm]{geometry}
-\usepackage{graphicx}
-\usepackage{xcolor}
-\usepackage{listings}
-\usepackage{caption}
-\usepackage[colorlinks=true,linkcolor=blue!55!black,urlcolor=blue!55!black]{hyperref}
+\input{preamble.tex}
+\input{metadata.tex}
+\hypersetup{pdftitle={BTL1 - Tìm kiếm: Pipes và Light Up},
+  pdfsubject={DFS, Greedy Best-First và Backtracking với MRV/CP}}
 
 \definecolor{codekw}{HTML}{285BC2}
 \lstset{basicstyle=\ttfamily\small,columns=fullflexible,keepspaces=true,
   showstringspaces=false,keywordstyle=\color{codekw},frame=single,
-  rulecolor=\color{gray!40},framerule=0.3pt,aboveskip=8pt,belowskip=8pt}
+  rulecolor=\color{gray!40},framerule=0.3pt,aboveskip=8pt,belowskip=8pt,breaklines=true}
 
 \captionsetup{font=small,labelfont=bf}
 \setlength{\parskip}{2pt}
 \setlength{\emergencystretch}{3em}
 
-\newcommand{\code}[1]{\texttt{#1}}
+\renewcommand{\code}[1]{\texttt{#1}}
+\definecolor{ink}{HTML}{25282D}
 
 \begin{document}
+\hypersetup{pageanchor=false}
 
 % ---------- Trang bìa ----------
 \begin{titlepage}
 \centering
-{\large\textbf{[TÊN TRƯỜNG]}\\[2pt]
-\textbf{[KHOA / BỘ MÔN]}\par}
-\vspace{18mm}
-{\Large\textbf{BÀI TẬP LỚN 1 --- TÌM KIẾM}\\[4mm]
-\large Học kỳ 1, năm học 2026--2027\par}
-\vspace{6mm}
-{\large Môn: Nhập môn Trí tuệ nhân tạo\par}
-\vspace{14mm}
-{\huge\bfseries Pipes \& Light Up:\\[3mm]
-Hiện thực giải thuật tìm kiếm cho hai bài toán Logic Puzzle\par}
-\vspace{6mm}
-\includegraphics[width=.45\textwidth]{../docs/images/pipes.png}
-\vspace{10mm}
-
-{\large\textbf{Danh sách thành viên}}\par\vspace{3mm}
-\begin{tabular}{@{}lll@{}}
-\toprule
-Họ và tên & MSSV & Lớp\\
-\midrule
-{[Họ tên 1]} & {[MSSV 1]} & {[Lớp 1]}\\
-{[Họ tên 2]} & {[MSSV 2]} & {[Lớp 2]}\\
-{[Họ tên 3]} & {[MSSV 3]} & {[Lớp 3]}\\
-\bottomrule
-\end{tabular}
-
-\vspace{12mm}
-{\large Giảng viên hướng dẫn: [Tên giảng viên]\par}
-\vspace{6mm}
-{\large [Địa điểm], ngày 31 tháng 10 năm 2026\par}
+\vspace*{10mm}
+{\large ĐẠI HỌC QUỐC GIA THÀNH PHỐ HỒ CHÍ MINH\\[2mm]
+TRƯỜNG ĐẠI HỌC BÁCH KHOA\\[2mm]
+KHOA KHOA HỌC VÀ KỸ THUẬT MÁY TÍNH\par}
+\vspace{10mm}\includegraphics[height=30mm]{assets/hcmut-logo.png}\par
+\vspace{17mm}
+{\Large\bfseries INTRODUCTION TO\\[2mm]ARTIFICIAL INTELLIGENCE (\CourseCode)\par}
+\vspace{6mm}\hrule\vspace{5mm}
+{\Large\bfseries BÁO CÁO BÀI TẬP LỚN 1\par}
+\vspace{5mm}{\Large\bfseries TÌM KIẾM (SEARCHING)\par}
+\vspace{4mm}{\large Pipes và Light Up (Akari)\par}
+\vspace{5mm}\hrule\vspace{10mm}
+\begin{minipage}{.78\textwidth}\raggedright
+\ifdefempty{\InstructorName}{\textbf{Giảng viên:}\ \rule{.65\linewidth}{.2pt}\par}{\textbf{Giảng viên:} \InstructorName\par}
+\vspace{3mm}
+\ifdefempty{\ClassName}{\textbf{Lớp:}\ \rule{.75\linewidth}{.2pt}\par}{\textbf{Lớp:} \ClassName\par}
+\vspace{4mm}\textbf{Sinh viên thực hiện:}\par\vspace{3mm}
+\ifdefempty{\StudentRows}{\rule{.95\linewidth}{.2pt}\par\vspace{5mm}\rule{.95\linewidth}{.2pt}\par}{\begin{tabular}{@{}ll@{}}\StudentRows\end{tabular}}
+\end{minipage}
+\vfill{\normalsize THÀNH PHỐ HỒ CHÍ MINH, \ReportMonth\par}\vspace{7mm}
 \end{titlepage}
-
+\pagenumbering{arabic}
+\hypersetup{pageanchor=true}
 \tableofcontents
 \newpage
 
-% ---------- 1. Mở đầu ----------
-\section{Mở đầu}
-
-\subsection{Mục tiêu}
-
-Bài tập lớn 1 yêu cầu nhóm chọn hai bài toán trong bộ Logic Puzzles tại
-\url{https://www.puzzle-pipes.com/} (và các bài toán liên quan trên trang này),
-sau đó hiện thực bằng Python 3 hai giải thuật tìm kiếm cho \textbf{mỗi} bài toán:
-một giải thuật \emph{tìm kiếm mù} (DFS hoặc BrFS) và một giải thuật \emph{heuristic}
-(A*, Hill Climbing, v.v.). Bài làm phải có chế độ demo từng bước với hiển thị
-trực quan dạng game, kèm báo cáo trình bày quá trình tìm hiểu, quá trình hiện thực,
-bảng số liệu thời gian và bộ nhớ tiêu tốn của từng giải thuật trên từng input,
-và phần giải thích kết quả.
-
-\subsection{Hai bài toán được chọn}
-
-Nhóm chọn hai bài toán:
-
-\begin{itemize}
-\item \textbf{Pipes} (\url{https://www.puzzle-pipes.com/}): xoay các đoạn ống để
-tạo thành một mạng liên thông, không rò rỉ và không có chu trình. Hai giải thuật:
-tìm kiếm theo chiều sâu \textbf{DFS} (mù) và \textbf{Greedy Best-First} (heuristic).
-\item \textbf{Light Up / Akari} (\url{https://www.puzzle-light-up.com/}, cùng hệ
-bài toán Logic Puzzles): đặt bóng đèn trên ô trắng sao cho mọi ô trắng được chiếu
-sáng, không bóng nào chiếu thẳng vào bóng khác và mọi tường số có đúng số bóng kề.
-Hai giải thuật đo mới: \textbf{DFS} (mù) và \textbf{Backtracking + MRV + CP}
-(tìm kiếm ràng buộc có heuristic). A* vẫn có trong ứng dụng để tối ưu số bóng.
-\end{itemize}
-
-Mỗi thực nghiệm dùng input theo cặp với cùng giới hạn tài nguyên cho các giải
-thuật được so sánh. Light Up đo mới trên 60 bàn với seed khác nhau; Pipes giữ
-bộ số liệu đã công bố trước đó.
-
-\subsection{Môi trường và công cụ}
-
-\begin{itemize}
-\item \textbf{Ngôn ngữ}: Python 3 (yêu cầu bắt buộc của đề bài). Môi trường phát
-triển dùng Python 3.13, quản lý phụ thuộc bằng \code{uv}.
-\item \textbf{Đồ họa và demo}: \code{pygame-ce} cho cả hai game; \code{pygame-gui}
-bổ sung điều khiển cho giao diện Light Up.
-\item \textbf{Kiểm thử và chất lượng mã}: \code{unittest} cho cả hai package,
-\code{ruff} kiểm tra phong cách mã; chạy tự động bằng GitHub Actions.
-\item \textbf{Đo lường}: \code{time.perf\_counter} cho thời gian,
-\code{tracemalloc} cho đỉnh bộ nhớ cấp phát của Python.
-\item \textbf{Biên soạn tài liệu}: \LaTeX{} (tectonic) cho báo cáo và slide.
-\end{itemize}
-
-\subsection{Tổ chức mã nguồn}
-
-Mã nguồn đặt trong một kho chung, mỗi bài toán một package riêng biệt:
-
-\begin{lstlisting}
-Introduction-to-AI/
-  main.py             Launcher chung: uv run main.py [pipes|lightup]
-  pipes_problem/      Game Pipes, DFS/Greedy, UI, benchmark, test
-  light_up_problem/   Light Up, DFS/CSP/A*, UI, benchmark, test
-  docs/               Phan tich hoc thuat, bang chung benchmark (CSV + md)
-  report/             Nguon LaTeX cua bao cao (main-vi, main-en)
-  slides/             Nguon LaTeX cua slides (main-vi, main-en)
-\end{lstlisting}
-
-Cách chạy chi tiết nằm trong \code{README.md} của kho. Hai game chạy bằng
-\code{uv run main.py pipes} và \code{uv run main.py lightup}.
-
-\subsection{Quy trình tìm hiểu và hiện thực}
-
-Nhóm thực hiện theo cùng một quy trình cho cả hai bài toán:
-
-\begin{enumerate}
-\item \textbf{Tìm hiểu luật chơi}: chơi trực tiếp trên trang gốc của từng puzzle,
-ghi lại luật bất biến (điều kiện thắng, ràng buộc), tham chiếu trang
-\code{puzzle-pipes.com} / \code{puzzle-light-up.com}.
-\item \textbf{Phát biểu bài toán tìm kiếm}: xác định trạng thái, trạng thái đầu,
-tác động, chuyển tiếp, kiểm tra đích và chi phí; chọn cách biểu diễn trạng thái
-hiệu quả (tiền tố định hướng cho Pipes, bitmask cho Light Up).
-\item \textbf{Thiết kế giải thuật}: một giải thuật mù (DFS) và một giải thuật
-heuristic (Greedy / MRV kết hợp propagation), kèm cắt tỉa hợp lệ; viết giả mã trước
-khi code.
-\item \textbf{Hiện thực và demo}: cài đặt game trực quan với pygame, có chế độ
-chạy từng bước (\emph{step-by-step}) cho quá trình tìm kiếm và phát lại lời giải.
-\item \textbf{Sinh input}: xây dựng bộ sinh puzzle theo seed xác định, kiểm chứng
-tồn tại nghiệm khi sinh; giải thích nguồn gốc từng input.
-\item \textbf{Đo lường}: chạy benchmark tự động, ghi CSV thời gian -- bộ nhớ --
-số node; lưu bằng chứng trong \code{docs/benchmarks/}.
-\item \textbf{Phân tích}: giải thích số liệu, đối chiếu lý thuyết với thực nghiệm,
-ghi rõ hạn chế.
-\end{enumerate}
-
-% ---------- 2. Pipes ----------
 \input{pipes-vi}
-
-% ---------- 3. Light Up ----------
 \input{lightup-vi}
 
-% ---------- 4. Kết luận ----------
-\section{Kết luận}
-Repository có demo tìm kiếm trực quan cho cả hai bài toán. Pipes so DFS với
-Greedy Best-First; thực nghiệm Light Up mới so DFS với Backtracking + MRV + CP.
-A* vẫn có trong Light Up nhưng số liệu lịch sử không được trộn với generator
-hiện tại và thực nghiệm năm seed khác nhau.
-\begin{itemize}
-\item \textbf{Heuristic có chi phí.} Propagation giảm tìm kiếm nhưng tốn thêm
-công việc mỗi node. Trên bàn nhỏ cắt tỉa tốt, DFS có thể nhanh hơn; CSP cải thiện
-khả năng giải trong ngân sách ở các trường hợp rẽ nhánh lớn.
-\item \textbf{So sánh theo cặp.} Năm seed mỗi cấu hình lấy mẫu nhiều input,
-không phải lặp năm lần cùng một bàn. Hai giải thuật nhận cùng map và cùng giới
-hạn thời gian/node/bộ nhớ ước lượng.
-\item \textbf{Giới hạn không phải vô nghiệm.} Ghi riêng TIMEOUT, NODE\_LIMIT,
-MEMORY\_LIMIT. Thời lượng lượt bị dừng không ước lượng thời gian giải xong.
-Xem bảng kết quả Light Up và CSV gốc.
-\item \textbf{Định nghĩa phép đo.} Đỉnh cấp phát Python không phải RSS.
-Giới hạn bộ nhớ dùng giá trị ước lượng của solver; node CSP và DFS cũng không
-đại diện cùng lượng công việc.
-\end{itemize}
-Hướng tiếp theo: tăng số seed, thêm bàn vô nghiệm, ablation CP/MRV/cắt tỉa,
-kiểm tra duy nhất và đo thời gian riêng khi tắt tracemalloc.
+\section*{Kết luận}
+\addcontentsline{toc}{section}{Kết luận}
+Nhóm đã hiện thực hai trò chơi Pipes và Light Up bằng Python 3. Mỗi trò chơi
+có chế độ chơi tay, chế độ xem giải thuật chạy từng bước, và hai giải thuật:
+một giải thuật mù (DFS) và một giải thuật có heuristic.
 
+\begin{itemize}
+\item \textbf{Pipes:} DFS và Greedy Best-First đều giải được cả 9 bàn trong vài
+chục mili giây. Vì cắt tỉa đã loại gần hết hướng sai, hai giải thuật chạy nhanh
+gần như nhau; Greedy dùng ít bộ nhớ hơn trên bộ thử này.
+\item \textbf{Light Up:} CSP (backtracking với MRV và lan truyền ràng buộc) giải
+được 60/60 bàn, DFS giải được 52/60. Ở bàn nhỏ DFS thường nhanh hơn, nhưng ở bàn
+$25\times25$ CSP xong trong khoảng 1 giây còn DFS nhiều lần hết 30 giây.
+\end{itemize}
+
+Bài học chính của nhóm là heuristic không phải lúc nào cũng làm giải thuật nhanh
+hơn: nó có ích khi không gian tìm kiếm đủ lớn, còn ở bài dễ thì chi phí tính
+heuristic có thể lớn hơn phần tiết kiệm được. Hướng phát triển tiếp theo là thêm
+bàn khó và bàn vô nghiệm, đo nhiều seed hơn, kiểm tra tính duy nhất của lời giải
+Light Up và đo riêng tác dụng của từng kỹ thuật cắt tỉa, MRV và CP.
+
+\input{lightup-per-input.tex}
 \clearpage
 \begin{thebibliography}{99}
+\raggedright
+\addcontentsline{toc}{section}{Tài liệu tham khảo}
 \bibitem{akari-np} B. McPhail. \emph{Light Up is NP-complete}, 2005.
 \url{https://www.mountainvistasoft.com/docs/lightup-is-np-complete.pdf}
 \bibitem{akari-difficulty} V. Dekker. \emph{A Difficulty Measure for Light Up Puzzles}.

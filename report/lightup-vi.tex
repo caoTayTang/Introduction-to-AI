@@ -1,51 +1,64 @@
-% Light Up/Akari: quá trình tìm hiểu, lựa chọn thiết kế và đối chiếu mã nguồn.
-\section{Bài toán 2: Light Up (Akari)}
-\subsection{Quá trình tìm hiểu và luật chơi}
-Light Up, còn gọi là Akari, là trò chơi suy luận trên lưới do Nikoli phát triển
-năm 2001~\cite{akari-rules}. Nhóm bắt đầu từ luật chính thức của Nikoli,
-đối chiếu cách tương tác trên Puzzle Light Up, rồi tìm hiểu các hướng giải và
-cách đánh giá độ khó trước khi xây dựng chương trình~\cite{akari-rules,lightup}.
-McPhail chứng minh bài toán quyết định ``một bàn Light Up có lời giải hay không''
-là NP-complete trong trường hợp tổng quát, qua phép quy dẫn từ Circuit-SAT~\cite{akari-np}.
-Kết quả này là cơ sở để nhóm chọn tìm kiếm kết hợp cắt tỉa và suy luận ràng buộc.
-
-Bàn gồm ô trắng và tường đen; một số tường mang số từ 0 đến 4. Theo luật
-Nikoli~\cite{akari-rules}, một lời giải phải thỏa mãn:
+\clearpage
+\section{Light Up (Akari)}
+\subsection{Giới thiệu}
+Light Up (tên gốc Akari) là trò chơi đặt bóng đèn trên lưới. Nhóm lấy luật từ
+Nikoli và trang Puzzle Light Up~\cite{akari-rules,lightup}. Bàn gồm ô trắng và
+ô tường màu đen; một số tường có ghi số từ 0 đến 4. Người chơi đặt bóng vào
+các ô trắng sao cho:
 \begin{itemize}
-\item Bóng chỉ đặt trên ô trắng, chiếu theo hàng và cột đến tường hoặc biên;
-ô chứa bóng cũng được tính là sáng.
-\item Mọi ô trắng đều phải được chiếu sáng.
-\item Hai bóng không được chiếu vào nhau; có thể cùng hàng hoặc cột nếu có tường chắn.
-\item Tường số $k$ có đúng $k$ bóng kề trực tiếp theo bốn hướng, không tính đường chéo.
-Tường không số chỉ chặn ánh sáng.
+\item Mỗi bóng chiếu sáng theo hàng và cột cho tới khi gặp tường hoặc biên.
+Ô có bóng cũng được tính là sáng.
+\item Mọi ô trắng đều được chiếu sáng.
+\item Hai bóng không được chiếu vào nhau. Hai bóng vẫn có thể cùng hàng hoặc
+cùng cột nếu có tường chắn ở giữa.
+\item Tường ghi số $k$ có đúng $k$ bóng ở bốn ô kề trên, dưới, trái, phải
+(không tính đường chéo). Tường không ghi số chỉ có tác dụng chắn sáng.
 \end{itemize}
-Trang Puzzle Light Up~\cite{lightup} được tham khảo cho cách chọn kích thước,
-mức độ, nhấp trái đặt bóng và nhấp phải đánh dấu $\times$. Từ đó, nhóm bổ sung
-chức năng xem từng bước giải thuật và theo dõi các chỉ số tìm kiếm phục vụ bài học.
+Khác với Pipes, ở đây người chơi không xoay gì cả mà chọn ô để đặt bóng. Nhóm
+chọn DFS làm giải thuật mù và backtracking có MRV và lan truyền ràng buộc
+(gọi tắt là CSP) làm giải thuật heuristic.
 
-\subsection{Mô hình hóa bài toán}
-Gọi $P$ là tập ô trắng. Mỗi ô $i\in P$ có biến $x_i\in\{0,1\}$, với $x_i=1$
-nghĩa là có bóng. Đặt $V(i)$ là các ô trắng nhìn thấy từ $i$, kể cả chính nó;
-$L$ là một đoạn ô trắng liên tục theo hàng hoặc cột; $N(w)$ là các ô trắng kề
-tường số $w$. Ba nhóm ràng buộc tương ứng với luật chơi là:
+\subsection{Phát biểu bài toán tìm kiếm}
+Gọi $W$ là số ô trắng. Mỗi ô trắng $i$ có biến $x_i\in\{0,1\}$, với $x_i=1$ nghĩa
+là ô đó có bóng. Chương trình lưu tập bóng, tập ô sáng và tập ô còn được phép
+đặt bóng dưới dạng bitmask để kiểm tra nhanh.
+
+\begin{table}[H]\centering\small
+\begin{tabular}{@{}p{.20\textwidth}p{.74\textwidth}@{}}\toprule
+Thành phần & Định nghĩa\\\midrule
+Input & Vị trí ô trắng, tường và số trên tường\\
+Trạng thái & Tập bóng đã đặt, tập ô đã sáng và tập ô còn được đặt bóng\\
+Trạng thái đầu & Chưa có bóng nào\\
+Hành động & DFS: đặt một bóng. CSP: đặt bóng tại một nguồn chiếu, hoặc chọn một tổ hợp bóng quanh tường\\
+Chuyển trạng thái & Cập nhật bóng, ô sáng và ô còn đặt được; CSP suy luận thêm các bóng bắt buộc\\
+Trạng thái đích & Mọi ô trắng sáng, không hai bóng chiếu nhau, mọi tường số đủ bóng\\
+Chi phí & Số bóng của lời giải; cả hai giải thuật chỉ tìm lời giải đầu tiên, không tối ưu số bóng\\\bottomrule
+\end{tabular}
+\caption{Mô hình tìm kiếm của Light Up.}
+\end{table}
+
+Viết dưới dạng ràng buộc, gọi $V(i)$ là các ô trắng nhìn thấy từ $i$ (kể cả $i$),
+$L$ là một đoạn ô trắng liền nhau trên một hàng hoặc cột, và $N(w)$ là các ô
+trắng kề tường $w$ có số $k_w$:
 \begin{align*}
-\sum_{j\in V(i)}x_j &\geq 1 &&\text{(mỗi ô trắng được chiếu)},\\
-\sum_{j\in L}x_j &\leq 1 &&\text{(không có hai bóng nhìn nhau)},\\
-\sum_{j\in N(w)}x_j &= k_w &&\text{(đúng số bóng quanh tường)}.
+\sum_{j\in V(i)}x_j &\geq 1 &&\text{(ô $i$ được chiếu sáng)},\\
+\sum_{j\in L}x_j &\leq 1 &&\text{(không hai bóng chiếu nhau)},\\
+\sum_{j\in N(w)}x_j &= k_w &&\text{(tường $w$ đủ bóng)}.
 \end{align*}
-Trạng thái đầu chưa có bóng; trạng thái đích thỏa cả ba nhóm ràng buộc. Trong
-code, tập bóng, tập ô sáng và tập vị trí còn hợp lệ được lưu bằng bitmask để
-cập nhật nhanh. Với CSP, ô có bóng có miền $\{1\}$, ô bị cấm có miền $\{0\}$,
-ô chưa quyết định có miền $\{0,1\}$. Hàm kiểm tra đích được tách khỏi giao diện
-để dùng chung cho solver, kiểm chứng bàn sinh và xác nhận kết quả thực nghiệm.
+Hàm \code{is\_goal\_state()} kiểm tra ba điều kiện này. Số tập bóng có thể có là
+$2^W$; đây là kích thước không gian cấu hình, còn số trạng thái thực sự được
+mở rộng nhỏ hơn rất nhiều nhờ cắt tỉa.
 
-\subsection{Thiết kế độ khó và sinh bàn chơi}
-Nhóm tham khảo nghiên cứu của Dekker~\cite{akari-difficulty}, trong đó độ khó
-được đánh giá theo các kỹ thuật suy luận cần dùng, từ xử lý tường/ô tối đến
-mẫu suy luận và bước đoán. Để đơn giản hóa phạm vi bài tập, chương trình
-\textbf{không áp dụng thang đo này}: ba nhãn easy/normal/hard chỉ khác nhau ở
-\textbf{mật độ tường mục tiêu}. Theo \path{light_up_problem/generator/generate.py},
-với bàn $n\times n$, số tường là $M=\operatorname{round}(\rho n^2)$:
+\begin{figure}[H]\centering
+\input{assets/lightup-board.tex}
+\caption{Bàn $7\times7$, mức easy, seed 70097 và lời giải do CSP tìm được.
+Ô đen là tường, hình tròn là bóng đèn.}
+\end{figure}
+
+\subsection{Tạo dữ liệu đầu vào}
+Bàn được sinh theo seed, nên cùng seed luôn cho cùng một bàn. Có ba mức
+easy, normal và hard, khác nhau ở tỉ lệ tường $\rho$. Bàn $n\times n$ có
+$M=\operatorname{round}(\rho n^2)$ ô tường:
 \begin{center}\small
 \begin{tabular}{@{}lrrrrr@{}}\toprule
 Mức & $\rho$ & $7\times7$ & $10\times10$ & $14\times14$ & $25\times25$\\\midrule
@@ -54,50 +67,78 @@ normal & 10.5\% & 5 & 10 & 21 & 66\\
 hard   & 5.5\%  & 3 & 6 & 11 & 34\\
 \bottomrule\end{tabular}
 \end{center}
-$M$ tính cả tường số lẫn tường không số; bảng dùng đúng cách làm tròn của
-Python. Việc sinh bàn ở cả ba mức theo cùng quy trình:
+Các bước sinh bàn (\path{light_up_problem/generator/generate.py}):
 \begin{enumerate}
-\item Dùng seed chọn ngẫu nhiên $M$ vị trí tường.
-\item Liên tiếp chọn một ô trắng còn tối để đặt bóng, đến khi mọi ô trắng sáng.
-Tập bóng thu được là một lời giải mẫu (witness).
-\item Suy ra số trên tường từ các bóng kề trong witness; giữ khoảng 25\% tường
-không số và kiểm chứng lại witness trước khi trả bàn cho người chơi.
+\item Chọn ngẫu nhiên $M$ vị trí làm tường.
+\item Lần lượt đặt bóng vào một ô trắng còn tối cho tới khi mọi ô đều sáng.
+Tập bóng này là một lời giải mẫu.
+\item Ghi số lên tường bằng số bóng kề trong lời giải mẫu, để khoảng 25\% số
+tường không ghi số. Cuối cùng kiểm tra lại lời giải mẫu với luật.
 \end{enumerate}
-Witness không được cung cấp cho solver. Các chỉ số về mật độ gợi ý và độ phủ
-ràng buộc được lưu trong metadata để mô tả bàn, không dùng để gán nhãn độ khó.
-Do đó, nhãn hard không bảo đảm mọi bàn đều khó hơn easy theo thời gian giải;
-chương trình cũng chưa kiểm tra tính duy nhất của lời giải.
+Vì bàn được dựng từ một lời giải nên chắc chắn có nghiệm. Solver không được
+biết lời giải mẫu. Nhóm có tham khảo cách đánh giá độ khó theo kỹ thuật suy luận
+của Dekker~\cite{akari-difficulty}, nhưng chưa áp dụng; nhãn easy/normal/hard
+hiện chỉ phản ánh số tường, và chương trình chưa kiểm tra bàn có nghiệm duy nhất.
 
-\subsection{Lựa chọn và hiện thực giải thuật}
-\paragraph{DFS làm mốc so sánh.}
-DFS chọn ô tối đầu tiên theo row-major, thử các vị trí hợp lệ có thể chiếu ô đó,
-và đi sâu ngay khi gặp ứng viên khả thi đầu tiên. Khi nhánh thất bại, solver
-quay lui để thử ứng viên kế tiếp. Kiểm tra khả thi loại trường hợp xung đột,
-tường không còn đủ ô kề hoặc ô tối không còn nguồn chiếu. Các nhánh anh em loại
-dần ứng viên đã thử để tránh lặp tập bóng theo thứ tự đặt khác nhau. Cài đặt dùng
-stack frame tường minh và liên kết cha để dựng lời giải, không phụ thuộc đệ quy Python.
+\subsection{Giải thuật tìm kiếm mù}
+\subsubsection*{Depth-First Search (DFS)}
+Ở mỗi bước, DFS lấy ô tối đầu tiên theo thứ tự hàng rồi cột và thử lần lượt
+các vị trí có thể đặt bóng để chiếu ô đó. Một vị trí bị bỏ nếu bóng chiếu vào
+bóng khác, làm một tường bị thừa bóng hay không còn đủ chỗ đặt bóng, hoặc làm
+một ô tối không còn chỗ nào chiếu tới được. DFS đi sâu ngay vào nhánh hợp lệ
+đầu tiên và quay lui khi bế tắc.
 
-\paragraph{CSP: Backtracking + MRV + Constraint Propagation.}
-Nhóm tham khảo cách kết hợp suy luận bắt buộc với backtracking trong mục 4.1.1
-và 4.1.3 của Pulles~\cite{akari-analysis}, cùng mã \code{tracksolver.py} trong
-repository Borroot/akari~\cite{akari-code}. Các nguồn này giúp định hướng việc
-quản lý ô tối, ứng viên và phục hồi trạng thái. Trong chương trình hiện tại,
-hướng đó được triển khai bằng bitmask, propagation tại mỗi nhánh và
-\textbf{MRV động trên ràng buộc}; đây là các lựa chọn hiện thực được mô tả theo code.
+\noindent\begin{minipage}{\textwidth}
+\begin{lstlisting}
+DFS(state):
+  if budget exhausted: return LIMIT
+  if GOAL(state): return SOLVED(state)
+  target = first dark cell in row-major order
+  for bulb in legal illuminators(target):
+    child = place(bulb)
+    if FEASIBLE(child):
+      result = DFS(child)
+      if solved or limited: return result
+    exclude bulb from later sibling choices
+  return UNSOLVABLE
+\end{lstlisting}
+\end{minipage}
 
-Constraint propagation (CP) lặp đến khi không còn thay đổi:
+Dòng \code{exclude bulb} giúp các nhánh anh em không đặt lại một vị trí đã thử,
+tránh việc cùng một tập bóng xuất hiện nhiều lần với thứ tự đặt khác nhau.
+Trong code, đệ quy được thay bằng stack tường minh. Thứ tự chọn ô và thứ tự thử
+là cố định, DFS không dùng điểm đánh giá nào.
+
+Mỗi bước thêm một bóng nên độ sâu không quá $W$. Nếu mỗi ô tối có tối đa $b$
+cách chiếu và lời giải sâu $d$, số trạng thái xấu nhất là $O(b^d)$. Stack chỉ
+giữ nhánh hiện tại, nhưng chương trình còn lưu liên kết cha để phát lại các
+bước, nên bộ nhớ tăng theo số trạng thái đã sinh.
+
+\subsection{Giải thuật tìm kiếm heuristic}
+\subsubsection*{Backtracking với MRV và lan truyền ràng buộc (CSP)}
+Ý tưởng là suy ra những gì bắt buộc trước, chỉ đoán khi không suy ra được nữa,
+và khi phải đoán thì đoán ở chỗ ít lựa chọn nhất. Cách làm này dựa trên phân
+tích của Pulles~\cite{akari-analysis} và bộ giải Borroot/akari~\cite{akari-code}.
+
+\paragraph{Lan truyền ràng buộc (CP).} Chương trình lặp các luật sau cho tới khi
+không còn gì thay đổi:
 \begin{itemize}
-\item Tường đủ bóng: cấm các ô kề chưa quyết định. Nếu số bóng còn thiếu bằng
-số ô kề hợp lệ: buộc đặt bóng ở tất cả các ô đó.
-\item Ô tối chỉ còn một nguồn chiếu hợp lệ: buộc đặt bóng tại nguồn đó. Mỗi bóng
-mới đồng thời cấm đặt bóng khác trên đường chiếu sáng của nó.
-\item Loại các vị trí gây xung đột đường chéo khi chúng làm tường không còn đủ
-ô kề để đạt số bóng yêu cầu; gặp mâu thuẫn thì loại nhánh.
+\item Tường đã đủ bóng thì cấm đặt bóng ở các ô kề còn lại. Tường còn thiếu $r$
+bóng và chỉ còn đúng $r$ ô kề đặt được thì đặt bóng ở cả $r$ ô đó.
+\item Ô tối chỉ còn một vị trí có thể chiếu tới thì đặt bóng ở vị trí đó.
+Mỗi bóng mới làm cấm các ô khác trên đường sáng của nó.
+\item Nếu đặt bóng ở một ô làm một tường số không thể đủ bóng, ô đó bị cấm.
 \end{itemize}
-Sau CP, MRV (Minimum Remaining Values) ưu tiên ràng buộc ít lựa chọn nhất:
-tường còn $u$ ô kề và thiếu $r$ bóng có $\binom{u}{r}$ tổ hợp; ô tối có số lựa
-chọn bằng số nguồn chiếu còn hợp lệ. Hòa điểm ưu tiên tường. Các tổ hợp xung đột
-được loại, còn ứng viên được thử theo số ô tối chiếu thêm, từ nhiều đến ít.
+Nếu gặp mâu thuẫn (ô tối không còn nguồn chiếu, tường không thể đủ bóng) thì
+nhánh hiện tại bị bỏ.
+
+\paragraph{Chọn nhánh bằng MRV.} Khi CP dừng mà chưa tới đích, MRV (Minimum
+Remaining Values) chọn ràng buộc có ít lựa chọn nhất. Một tường còn $u$ ô kề
+trống và thiếu $r$ bóng có $\binom{u}{r}$ cách đặt; một ô tối có số lựa chọn
+bằng số vị trí còn chiếu được tới nó. Nếu bằng nhau thì ưu tiên tường. Các lựa
+chọn được thử theo thứ tự chiếu sáng thêm nhiều ô nhất trước.
+
+\noindent\begin{minipage}{\textwidth}
 \begin{lstlisting}
 BACKTRACK_MRV_CP(state):
   check budgets; propagate until no change
@@ -111,24 +152,40 @@ BACKTRACK_MRV_CP(state):
     restore parent checkpoint before next choice
   return failure
 \end{lstlisting}
-Giả mã mô tả luồng quay lui; code dùng stack frame tường minh. Checkpoint phục
-hồi cả bóng lẫn miền hợp lệ. Hàm \code{backtracking\_mrv\_cp}
-chạy propagation cả ở gốc, rồi tìm lời giải đầu tiên; DFS và CSP đều không bảo
-đảm tối ưu số bóng. A* vẫn có trong ứng dụng nhưng không thuộc phép so sánh này.
-Một node CSP có thể chứa nhiều bóng suy ra, nên số node giữa hai solver không
-phải lượng công việc tương đương; benchmark đo hiệu ứng kết hợp MRV, CP và thứ tự thử.
+\end{minipage}
 
-\subsection{Demo và phương pháp thực nghiệm}
-Giao diện cho phép chơi tay hoặc chọn solver, Start Search, Pause/Resume và xem
-lại lịch sử bằng hai mũi tên ở 2/8/30 bước mỗi giây. CSP hiện từng suy luận,
-đánh dấu $\times$ ở ô cấm và phục hồi đầy đủ khi quay lui. Worker riêng giữ giao
-diện phản hồi. Visualizer bỏ timeout nhưng vẫn giới hạn node/bộ nhớ; benchmark
-không bật trace/animation và giữ đủ ba giới hạn.
+Mỗi lần quay lui, chương trình khôi phục cả tập bóng lẫn tập ô còn đặt được về
+checkpoint của nút cha. Code cũng dùng stack tường minh như DFS.
 
-Đợt đo ngày 31/10/2026 dùng 4 kích thước $\times$ 3 mức $\times$ 5 seed khác
-nhau, tức 60 bàn và 120 lượt DFS/CSP. Mỗi bàn chạy một lần mỗi solver; tất cả
-lượt chạy tuần tự trong process mới, đảo thứ tự solver ở các seed liên tiếp.
-Các dải seed dùng chung cho hai solver là:
+Trường hợp xấu nhất CSP vẫn tốn thời gian hàm mũ. CP giúp giảm mạnh số nhánh
+nhưng làm mỗi nút tốn công hơn, vì phải lặp các luật suy luận. Một nút CSP có
+thể đặt nhiều bóng cùng lúc, nên số nút của CSP và DFS không tương ứng với cùng
+một lượng công việc. Cả hai giải thuật chỉ bỏ những nhánh chắc chắn không có
+nghiệm, nên sẽ tìm được lời giải nếu đủ thời gian.
+
+\subsection{Hiện thực và minh họa từng bước}
+Package \code{light\_up\_problem} gồm \code{core/} (luật và cấu trúc bàn),
+\code{generator/} (sinh bàn), \code{algorithms/search.py} (giải thuật),
+\code{ui/app.py} (giao diện pygame-ce và pygame-gui) và \code{benchmark/} (đo).
+Solver chạy trong một worker riêng để giao diện không bị đứng.
+
+\begin{itemize}
+\item \textbf{Chơi tay:} click trái để đặt hoặc bỏ bóng, click phải để đánh dấu
+ô không đặt bóng, rồi bấm kiểm tra lời giải.
+\item \textbf{Xem giải thuật chạy:} chọn DFS hoặc CSP rồi bấm Start Search.
+Có Pause/Resume, hai mũi tên để đi tới hoặc lui từng bước, và ba tốc độ
+2, 8, 30 bước mỗi giây.
+\item DFS hiện ô đang xét, bóng vừa đặt và lúc quay lui. CSP hiện thêm các bóng
+được suy ra, các ô bị cấm (dấu $\times$) và việc khôi phục khi quay lui.
+\item Nút \textbf{Compare DFS and CSP} chạy cả hai giải thuật một lần trên bàn
+đang mở và hiện thời gian, bộ nhớ, số nút.
+\end{itemize}
+
+\subsection{Kết quả thực nghiệm}
+Nhóm đo trên 4 kích thước, 3 mức và 5 seed cho mỗi cấu hình, tức 60 bàn khác
+nhau. Mỗi bàn được giải một lần bằng mỗi giải thuật, tổng cộng 120 lượt. Mỗi
+lượt chạy trong một process mới, các lượt chạy lần lượt và thứ tự hai giải thuật
+được đảo ở các seed liên tiếp. Seed dùng cho từng cấu hình:
 \begin{center}\small
 \begin{tabular}{@{}rlll@{}}\toprule
 Cỡ & easy & normal & hard\\\midrule
@@ -139,21 +196,14 @@ Cỡ & easy & normal & hard\\\midrule
 \bottomrule\end{tabular}
 \end{center}
 
-Giới hạn chung là \textbf{30 giây, 500.000 node mở rộng, 512 MiB bộ nhớ ước lượng}.
-Giữ riêng \code{TIMEOUT}, \code{NODE\_LIMIT}, \code{MEMORY\_LIMIT} và
-\code{UNSOLVABLE}; không tự nới ngân sách. UNSOLVABLE chỉ được kết luận khi
-chứng minh mâu thuẫn hoặc đã hết nhánh, không phải khi chạm giới hạn.
-Thời gian đo bằng \code{perf\_counter}
-bên trong solver khi bật \code{tracemalloc}; không tính sinh bàn, khởi động
-process hay kiểm chứng bên ngoài. Bộ nhớ là đỉnh cấp phát Python, khác RSS và
-khác giá trị ước lượng dùng để dừng solver. Mọi kết quả SOLVED đều được kiểm
-chứng độc lập. Do kiểm tra giới hạn tại checkpoint, thời gian có thể vượt nhẹ 30 giây.
+Mỗi lượt giới hạn 30 giây, 500.000 nút mở rộng và 512 MiB bộ nhớ. Lượt vượt
+giới hạn được ghi là TIMEOUT, NODE\_LIMIT hoặc MEMORY\_LIMIT, không bị tính là
+vô nghiệm. Thời gian đo bằng \code{perf\_counter} quanh solver, không tính thời
+gian sinh bàn hay khởi động process. Bộ nhớ là đỉnh cấp phát của Python đo bằng
+\code{tracemalloc}, không phải RAM của cả process. Mọi lời giải đều được kiểm tra
+lại bằng \code{is\_goal\_state()}. Số liệu thô nằm ở
+\path{docs/benchmarks/2026-10-31-lightup-dfs-csp.csv}.
 
-CSV, summary và manifest chứa đầy đủ seed, bàn JSON, hash cùng thông tin môi
-trường tại \path{docs/benchmarks/}, với tiền tố
-\path{2026-10-31-lightup-dfs-csp}. Đây là bộ dữ liệu được dùng cho các bảng dưới.
-
-\subsection{Kết quả đo}
 \begin{center}\small
 \begin{tabular}{@{}lrrrr@{}}
 \toprule
@@ -164,68 +214,76 @@ CSP & 60 & 0 & 0 & 0\\
 \bottomrule
 \end{tabular}
 \end{center}
-\begin{table}[htbp]
+\begin{table}[H]
 \centering\scriptsize
 \setlength{\tabcolsep}{4pt}
-\begin{tabular}{@{}rllccrrrr@{}}
+\begin{tabular}{@{}rllcrrrr@{}}
 \toprule
-Cỡ & Độ khó & Thuật toán & Giải được & T/N/M & Giây & Đỉnh (KiB) & Node & Bóng\\
+Cỡ & Mức & Giải thuật & Giải được & Thời gian (s) & Bộ nhớ (KiB) & Số nút & Số bóng\\
 \midrule
-7 & easy & DFS & 5/5 & 0/0/0 & 0.0075 & 24.9 & 11 & 9\\
-7 & easy & CSP & 5/5 & 0/0/0 & 0.0066 & 25.2 & 4 & 9\\
+7 & easy & DFS & 5/5 & 0.0075 & 24.9 & 11 & 9\\
+7 & easy & CSP & 5/5 & 0.0066 & 25.2 & 4 & 9\\
 \addlinespace[2pt]
-7 & normal & DFS & 5/5 & 0/0/0 & 0.0066 & 26.8 & 9 & 7\\
-7 & normal & CSP & 5/5 & 0/0/0 & 0.0103 & 29.0 & 6 & 7\\
+7 & normal & DFS & 5/5 & 0.0066 & 26.8 & 9 & 7\\
+7 & normal & CSP & 5/5 & 0.0103 & 29.0 & 6 & 7\\
 \addlinespace[2pt]
-7 & hard & DFS & 5/5 & 0/0/0 & 0.0074 & 27.3 & 8 & 7\\
-7 & hard & CSP & 5/5 & 0/0/0 & 0.0107 & 30.5 & 6 & 6\\
+7 & hard & DFS & 5/5 & 0.0074 & 27.3 & 8 & 7\\
+7 & hard & CSP & 5/5 & 0.0107 & 30.5 & 6 & 6\\
 \addlinespace[2pt]
-10 & easy & DFS & 5/5 & 0/0/0 & 0.0229 & 55.9 & 27 & 15\\
-10 & easy & CSP & 5/5 & 0/0/0 & 0.0288 & 56.2 & 9 & 14\\
+10 & easy & DFS & 5/5 & 0.0229 & 55.9 & 27 & 15\\
+10 & easy & CSP & 5/5 & 0.0288 & 56.2 & 9 & 14\\
 \addlinespace[2pt]
-10 & normal & DFS & 5/5 & 0/0/0 & 0.0218 & 60.0 & 15 & 12\\
-10 & normal & CSP & 5/5 & 0/0/0 & 0.0309 & 61.8 & 8 & 11\\
+10 & normal & DFS & 5/5 & 0.0218 & 60.0 & 15 & 12\\
+10 & normal & CSP & 5/5 & 0.0309 & 61.8 & 8 & 11\\
 \addlinespace[2pt]
-10 & hard & DFS & 5/5 & 0/0/0 & 0.0229 & 62.4 & 12 & 11\\
-10 & hard & CSP & 5/5 & 0/0/0 & 0.0314 & 67.8 & 10 & 10\\
+10 & hard & DFS & 5/5 & 0.0229 & 62.4 & 12 & 11\\
+10 & hard & CSP & 5/5 & 0.0314 & 67.8 & 10 & 10\\
 \addlinespace[2pt]
-14 & easy & DFS & 5/5 & 0/0/0 & 0.2330 & 135.3 & 261 & 28\\
-14 & easy & CSP & 5/5 & 0/0/0 & 0.0801 & 109.1 & 12 & 25\\
+14 & easy & DFS & 5/5 & 0.2330 & 135.3 & 261 & 28\\
+14 & easy & CSP & 5/5 & 0.0801 & 109.1 & 12 & 25\\
 \addlinespace[2pt]
-14 & normal & DFS & 5/5 & 0/0/0 & 0.0724 & 117.3 & 34 & 22\\
-14 & normal & CSP & 5/5 & 0/0/0 & 0.1030 & 123.5 & 17 & 19\\
+14 & normal & DFS & 5/5 & 0.0724 & 117.3 & 34 & 22\\
+14 & normal & CSP & 5/5 & 0.1030 & 123.5 & 17 & 19\\
 \addlinespace[2pt]
-14 & hard & DFS & 5/5 & 0/0/0 & 0.0832 & 126.1 & 22 & 19\\
-14 & hard & CSP & 5/5 & 0/0/0 & 0.1168 & 134.6 & 15 & 16\\
+14 & hard & DFS & 5/5 & 0.0832 & 126.1 & 22 & 19\\
+14 & hard & CSP & 5/5 & 0.1168 & 134.6 & 15 & 16\\
 \addlinespace[2pt]
-25 & easy & DFS & 2/5 & 3/0/0 & 30.0001 & 2237.0 & 9\,328 & 73\\
-25 & easy & CSP & 5/5 & 0/0/0 & 0.9558 & 562.1 & 31 & 68\\
+25 & easy & DFS & 2/5 & 30.0001 & 2237.0 & 9\,328 & 73\\
+25 & easy & CSP & 5/5 & 0.9558 & 562.1 & 31 & 68\\
 \addlinespace[2pt]
-25 & normal & DFS & 1/5 & 4/0/0 & 30.0004 & 3583.3 & 13\,886 & 58\\
-25 & normal & CSP & 5/5 & 0/0/0 & 1.0274 & 696.9 & 33 & 52\\
+25 & normal & DFS & 1/5 & 30.0004 & 3583.3 & 13\,886 & 58\\
+25 & normal & CSP & 5/5 & 1.0274 & 696.9 & 33 & 52\\
 \addlinespace[2pt]
-25 & hard & DFS & 4/5 & 1/0/0 & 0.7835 & 870.3 & 46 & 40.5\\
-25 & hard & CSP & 5/5 & 0/0/0 & 1.0421 & 868.0 & 34 & 35\\
-\addlinespace[2pt]
+25 & hard & DFS & 4/5 & 0.7835 & 870.3 & 46 & 40.5\\
+25 & hard & CSP & 5/5 & 1.0421 & 868.0 & 34 & 35\\
 \bottomrule
 \end{tabular}
-\caption{Median trên năm seed khác nhau mỗi cấu hình. T/N/M lần lượt đếm TIMEOUT, NODE\_LIMIT, MEMORY\_LIMIT. Thời gian gồm cả lượt bị giới hạn, không phải thời gian giải xong. Cột Bóng là median số bóng chỉ trên các lượt SOLVED; số mẫu theo cột Giải được.}
+\caption{Light Up: trung vị trên 5 seed của mỗi cấu hình. Thời gian, bộ nhớ và
+số nút tính cả lượt TIMEOUT (thời gian 30 giây là lúc bị dừng, không phải lúc
+giải xong). Số bóng chỉ tính trên các lượt giải được. Kết quả từng bàn ở phụ lục.}
 \label{tab:lightup-dfs-csp-vi}
 \end{table}
-Thời gian, bộ nhớ và node là median trên cả năm lượt thử, kể cả lượt bị
-giới hạn. Cột Bóng chỉ tính lượt SOLVED, không coi TIMEOUT là 0; số mẫu theo
-cột Giải được. Khi số lượt giải được khác nhau, các median bóng có thể dựa
-trên tập seed khác nhau. Summary có thêm median thời gian riêng cho lượt SOLVED.
 
-\textbf{Đánh giá.} DFS giải được \textbf{52/60} bàn, CSP \textbf{60/60}; tám lượt
-TIMEOUT đều thuộc DFS. Không lượt nào chạm NODE\_LIMIT hay MEMORY\_LIMIT,
-nhưng cả hai giới hạn vẫn được bật. Trong 52 cặp cùng giải xong, CSP nhanh hơn
-ở 15 cặp; median $t_{DFS}/t_{CSP}=0.73$, nên không thể kết luận CSP luôn nhanh hơn.
-Bàn nhỏ đã cắt tỉa tốt có thể lợi cho DFS do CP tốn thêm công việc mỗi node;
-CSP cải thiện khả năng giải các trường hợp rẽ nhánh lớn trong cùng ngân sách.
-Số bóng chỉ mô tả nghiệm tìm được, không chứng minh tối ưu. Số liệu DFS/A* cũ
-ngày 25/10 dùng generator trước đó được lưu riêng, không trộn vào bảng mới.
+\subsection{Nhận xét}
+\paragraph{Số bàn giải được.} CSP giải được cả 60 bàn, DFS giải được 52 bàn.
+Tám lượt TIMEOUT đều của DFS và đều ở bàn $25\times25$. Không lượt nào chạm giới
+hạn nút hay bộ nhớ. Ở bàn lớn, DFS chọn sai sớm thì phải quay lui qua rất nhiều
+nhánh, ví dụ median 13\,886 nút ở mức normal so với 33 nút của CSP. CSP suy ra
+được phần lớn bóng mà không cần đoán, nên số nút gần như không tăng theo kích
+thước.
 
-Năm seed mỗi cấu hình còn là mẫu nhỏ; độ khó theo mật độ tường và tính duy nhất
-nghiệm chưa được hiệu chỉnh/kiểm tra. Hướng tiếp theo là tăng mẫu, thêm bàn vô
-nghiệm, tách tác dụng CP/MRV và đo thời gian riêng khi tắt tracemalloc.
+\paragraph{Thời gian.} Trong 52 bàn cả hai cùng giải được, CSP chỉ nhanh hơn ở
+15 bàn; trung vị của tỉ số $t_{DFS}/t_{CSP}$ là 0.73. Bàn nhỏ có ít nhánh, DFS gần
+như đi thẳng tới lời giải, còn CSP mất thêm thời gian lặp các luật suy luận ở mỗi
+nút. Lợi thế của CSP chỉ thấy rõ khi bàn đủ lớn: ở $14\times14$ easy CSP nhanh
+gấp khoảng 3 lần, còn ở $25\times25$ easy và normal CSP xong trong khoảng 1 giây
+trong khi DFS hết 30 giây.
+
+\paragraph{Bộ nhớ.} Ở bàn nhỏ hai giải thuật dùng bộ nhớ gần như nhau. Ở các bàn
+$25\times25$ mà DFS bị TIMEOUT, DFS dùng gấp 4 đến 5 lần CSP vì phải lưu nhiều
+trạng thái đã sinh. Số bóng trong lời giải của CSP thường ít hơn DFS (39/52 bàn),
+dù cả hai không nhắm tới việc tối thiểu số bóng.
+
+\paragraph{Hạn chế.} Mỗi cấu hình mới có 5 seed. Nhãn độ khó chỉ dựa trên số
+tường; ở cỡ 14 và 25, DFS lại giải mức hard nhanh hơn mức easy. Chương trình chưa
+kiểm tra tính duy nhất của lời giải và chưa đo riêng tác dụng của MRV và CP.

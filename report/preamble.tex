@@ -1,0 +1,64 @@
+% Shared packages for the standalone report and a merged team report.
+\usepackage[a4paper,top=27mm,bottom=24mm,left=26mm,right=24mm,headheight=36pt,headsep=7mm]{geometry}
+\usepackage{fontspec}
+\IfFontExistsTF{Times New Roman}{\setmainfont{Times New Roman}}{%
+\setmainfont{texgyretermes}[Extension=.otf,UprightFont=*-regular,
+BoldFont=*-bold,ItalicFont=*-italic,BoldItalicFont=*-bolditalic]}
+\setsansfont{lmsans10-regular.otf}[BoldFont=lmsans10-bold.otf,ItalicFont=lmsans10-oblique.otf]
+\setmonofont{lmmono10-regular.otf}[Scale=0.88]
+\usepackage{amsmath,amssymb,booktabs,array,tabularx,multirow}
+\usepackage{graphicx,xcolor,tikz,pgfplots}
+\usetikzlibrary{arrows.meta,positioning,calc,shapes.geometric}
+\pgfplotsset{compat=1.18}
+\usepackage{enumitem,float,caption,subcaption,listings,etoolbox}
+\usepackage{fancyhdr,lastpage,setspace,microtype,needspace}
+\usepackage[unicode,colorlinks=true,linkcolor=black,citecolor=black,urlcolor=blue!60!black]{hyperref}
+\usepackage{bookmark}
+\definecolor{pipeblue}{HTML}{285BC2}
+\definecolor{water}{HTML}{258BD2}
+\definecolor{muted}{HTML}{616A76}
+\definecolor{reject}{HTML}{B6473C}
+\renewcommand{\contentsname}{Mục lục}
+\renewcommand{\figurename}{Hình}
+\renewcommand{\tablename}{Bảng}
+\renewcommand{\refname}{Tài liệu tham khảo}
+\renewcommand{\lstlistingname}{Mã giả}
+\setcounter{tocdepth}{2}
+\setcounter{secnumdepth}{3}
+\setstretch{1.10}
+\setlength{\parindent}{1.2em}
+\setlength{\parskip}{3pt}
+\setlist{nosep,topsep=4pt,leftmargin=1.5em}
+\captionsetup{font=small,labelfont=bf,skip=7pt}
+\lstset{basicstyle=\ttfamily\small,columns=fullflexible,keepspaces=true,
+  showstringspaces=false,breaklines=true,frame=single,rulecolor=\color{black!25},
+  xleftmargin=1mm,xrightmargin=1mm,framesep=5pt,numbers=left,numberstyle=\tiny\color{muted},
+  numbersep=9pt,aboveskip=8pt,belowskip=8pt,
+  keywordstyle=\color{pipeblue},morekeywords={if,else,for,in,while,return,and,or,not,def}}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\parbox[c][11mm][c]{\textwidth}{\normalfont\normalsize
+  \parbox[c]{11mm}{\includegraphics[height=10mm]{assets/hcmut-logo.png}}\hspace{4mm}%
+  \parbox[c]{.85\textwidth}{\normalfont\fontsize{8.5}{10.5}\selectfont
+  TRƯỜNG ĐẠI HỌC BÁCH KHOA - ĐHQG TP.HCM\\
+  KHOA KHOA HỌC VÀ KỸ THUẬT MÁY TÍNH}}}
+\fancyfoot[L]{\fontsize{8}{10}\selectfont BTL Nhập môn Trí tuệ nhân tạo - Học kỳ 261}
+\fancyfoot[R]{\fontsize{8}{10}\selectfont Trang \thepage/\pageref*{LastPage}}
+\renewcommand{\headrulewidth}{.4pt}
+\renewcommand{\footrulewidth}{.4pt}
+\newcommand{\code}[1]{\texttt{\detokenize{#1}}}
+\newcommand{\R}{\mathcal{R}}
+\newcommand{\D}{\mathcal{D}}
+\newcommand{\pipetile}[4]{%
+\begin{scope}[shift={(#1,#2)}]
+  \draw[black!18] (-.5,-.5) rectangle (.5,.5);
+  \foreach \bit/\dx/\dy in {1/0/.5,2/.5/0,4/0/-.5,8/-.5/0}{%
+    \pgfmathtruncatemacro{\hasport}{mod(floor(#3/\bit),2)}
+    \ifnum\hasport=1\draw[#4,line width=3pt,line cap=round] (0,0)--(\dx,\dy);\fi}
+\end{scope}}
+\newcommand{\pipeboard}[2]{%
+\foreach \mask[count=\idx from 0] in {#1}{%
+  \pgfmathtruncatemacro{\col}{mod(\idx,4)}
+  \pgfmathtruncatemacro{\row}{-floor(\idx/4)}
+  \pipetile{\col}{\row}{\mask}{#2}}
+\fill[white] (2,-2) circle (.16);\fill[pipeblue] (2,-2) circle (.105);}

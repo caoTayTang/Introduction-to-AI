@@ -1,0 +1,48 @@
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{beamerthemeHCMUT}[2026/10/31 HCMUT course presentation]
+\usetheme{Madrid}
+\definecolor{HCMUTblue}{HTML}{034EA2}
+\definecolor{HCMUTink}{HTML}{202D3A}
+\definecolor{HCMUTmuted}{HTML}{637284}
+\setbeamercolor{normal text}{fg=HCMUTink,bg=white}
+\setbeamercolor{structure}{fg=HCMUTblue}
+\setbeamercolor{frametitle}{fg=HCMUTblue,bg=white}
+\setbeamercolor{institute bar}{fg=HCMUTblue,bg=white}
+\setbeamercolor{course footer}{fg=white,bg=HCMUTblue}
+\setbeamercolor{block title}{fg=HCMUTblue,bg=HCMUTblue!9}
+\setbeamercolor{block body}{fg=HCMUTink,bg=HCMUTblue!3}
+\setbeamerfont{frametitle}{size=\large,series=\bfseries}
+\setbeamerfont{section in toc}{size=\normalsize,series=\bfseries}
+\setbeamerfont{subsection in toc}{size=\footnotesize}
+\setbeamertemplate{navigation symbols}{}
+\setbeamertemplate{blocks}[default]
+\setbeamertemplate{enumerate items}[default]
+\newif\ifHCMUTgame
+\HCMUTgamefalse
+\AtBeginSection{\HCMUTgametrue}
+\setbeamertemplate{itemize item}{\small\raise1pt\hbox{$\bullet$}}
+\setbeamertemplate{itemize subitem}{\tiny\raise1pt\hbox{$\bullet$}}
+\setbeamertemplate{section in toc}[sections numbered]
+\setbeamertemplate{subsection in toc}[subsections numbered]
+\setbeamersize{text margin left=8mm,text margin right=8mm}
+\setbeamertemplate{headline}{%
+  \begin{beamercolorbox}[wd=\paperwidth,ht=7mm,dp=2mm,leftskip=8mm,rightskip=6mm]{institute bar}%
+    \begin{minipage}[c]{.85\paperwidth}\fontsize{7}{8.5}\selectfont
+    TRƯỜNG ĐẠI HỌC BÁCH KHOA -- ĐHQG TP.HCM\\
+    KHOA KHOA HỌC VÀ KỸ THUẬT MÁY TÍNH
+    \end{minipage}\hfill\includegraphics[height=7mm]{../report/assets/hcmut-logo.png}%
+  \end{beamercolorbox}}
+\setbeamertemplate{frametitle}{%
+  \vskip1mm
+  \ifHCMUTgame
+    {\color{HCMUTmuted}\fontsize{8}{9}\selectfont
+    \insertsectionnumber.\insertsubsectionnumber\quad\insertsectionhead\par}\vskip1mm
+  \fi
+  {\usebeamerfont{frametitle}\color{HCMUTblue}\insertframetitle\par}
+  \vskip2mm{\color{HCMUTblue}\hrule height .45pt}\vskip1mm}
+\setbeamertemplate{footline}{%
+  \begin{beamercolorbox}[wd=\paperwidth,ht=2.8mm,dp=1.3mm,leftskip=8mm,rightskip=7mm]{course footer}%
+    \fontsize{7}{8}\selectfont HCMUT\quad|\quad CO3061 -- BTL1: Tìm kiếm
+    \hfill\insertframenumber/\inserttotalframenumber
+  \end{beamercolorbox}}
+\endinput
