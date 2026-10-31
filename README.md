@@ -4,7 +4,7 @@ Search algorithms for two logic puzzles, implemented in Python 3 with visual
 step-by-step demos. This repository contains **Pipes**
 ([puzzle-pipes.com](https://www.puzzle-pipes.com/), DFS + Greedy Best-First) and
 **Light Up / Akari** ([puzzle-light-up.com](https://www.puzzle-light-up.com/),
-DFS, A*, and Backtracking + MRV + Constraint Propagation). Each puzzle ships a
+DFS and Backtracking + MRV + Constraint Propagation). Each puzzle ships a
 pygame game, automated benchmarks and tests.
 
 ![Pipes with a solved network and animated water](docs/images/pipes.png)
@@ -62,14 +62,14 @@ exactly its count of immediately adjacent bulbs above, below, left and right
 | Click | Place or remove a bulb |
 | Puzzle picker | Choose size (7/10/14/25), difficulty and seed |
 | Play manually / Solve | Switch between manual mode and the solver |
-| DFS / A* / CSP (MRV + CP) | Select the algorithm (A* returns a minimum-bulb solution) |
+| DFS / CSP (MRV + CP) | Select the algorithm |
 | Start Search / Resume Search, Pause, Reset | Start or resume search, pause it, or stop and clear the board |
 | Compare DFS and CSP | Run both solvers on the current puzzle once |
 | `<` / `>` | Pause and review search states; `>` advances the paused worker at the latest state. After solving, review solution placements |
 | Speed: 2 / 8 / 30 steps/s | Cycle playback speed; default is 8 steps/s |
 
 Visualization shows each expansion, bulb attempt, rejected branch, stack/frontier
-insertion, DFS backtrack or A* state selection, and the final goal. Each event
+insertion, DFS backtrack or CSP state selection, and the final goal. Each event
 stays visible for one playback interval; slow frames do not skip steps. Pause
 freezes the displayed step, and Resume Search replays forward from the current
 history position before showing new events. The final result appears after the
@@ -77,16 +77,15 @@ trace has been displayed in order.
 
 DFS accepts the first valid candidate and immediately explores the next dark
 cell with that bulb kept in place. It tries another candidate only after the
-current branch fails and backtracks. A* evaluates and queues legal successors
-before selecting the next state with the lowest `f = g + h`.
+current branch fails and backtracks.
 
 CSP runs `backtracking_mrv_cp`: it selects the most constrained wall or dark
 cell, tries a branch, and propagates forced decisions before descending. Each
 forced bulb and each domain-pruning deduction has its own playback step, with a
 reason shown below the board. Dark cells marked `×` are forbidden by the solver;
 these marks are separate from manual notes and restore with the branch checkpoint
-when backtracking. Initial propagation is animated too. Only A* shows `g/h/f`.
-The Compare button continues to compare DFS and A*. The benchmark CLI also accepts CSP.
+when backtracking. Initial propagation is animated too. The Compare button
+runs DFS and CSP on the same board. The benchmark CLI also accepts CSP.
 
 Visualization has no time limit; node and memory limits still apply. Worker
 runtime includes waits for queue space and pauses. Benchmarks keep their own time
@@ -150,7 +149,7 @@ tectonic slides/main-en.tex   # slides/main-en.pdf (English)
 - [Pipes as a search problem](docs/pipes-analysis.md): formulation, pruning,
   pseudocode, complexity and evaluation design.
 - [Light Up as a search problem](docs/lightup-analysis.md): bitmask formulation,
-  DFS and the A* lower bound, generation methodology, measurement notes.
+  DFS and CSP, generation methodology, measurement notes.
 - [Implementation notes](docs/pipes-plan.md): Pipes JSON, playback and recording.
 - [Project handoff](handoff.md): code map, decisions and remaining work.
 
@@ -159,7 +158,7 @@ tectonic slides/main-en.tex   # slides/main-en.pdf (English)
 ```text
 main.py               Launcher: uv run main.py [pipes|lightup]
 pipes_problem/        Pipes game, solvers, tests, maps and configuration
-light_up_problem/     Light Up game, bitmask DFS / A* / CSP solvers, tests, UI
+light_up_problem/     Light Up game, bitmask DFS / CSP solvers, tests, UI
 docs/                 Algorithm analyses, benchmark evidence, images
 report/               LaTeX sources of the course report (VI + EN)
 slides/               LaTeX sources of the slides (VI + EN)

@@ -64,8 +64,10 @@ một giải thuật mù (DFS) và một giải thuật có heuristic.
 chục mili giây. Vì cắt tỉa đã loại gần hết hướng sai, hai giải thuật chạy nhanh
 gần như nhau; Greedy dùng ít bộ nhớ hơn trên bộ thử này.
 \item \textbf{Light Up:} CSP (backtracking với MRV và lan truyền ràng buộc) giải
-được 60/60 bàn, DFS giải được 52/60. Ở bàn nhỏ DFS thường nhanh hơn, nhưng ở bàn
-$25\times25$ CSP xong trong khoảng 1 giây còn DFS nhiều lần hết 30 giây.
+được 60/60 bàn, DFS giải được 52/60. Ở bàn $25\times25$, thời gian trung bình
+của CSP khoảng 1.04--2.11 giây tùy nhãn; DFS có 8 lượt bị dừng sau 30 giây.
+Các giá trị trung bình trong bảng tính cả lượt TIMEOUT, nên không coi thời
+lượng lượt bị dừng là thời gian giải xong.
 \end{itemize}
 
 Bài học chính của nhóm là heuristic không phải lúc nào cũng làm giải thuật nhanh

@@ -1,200 +1,255 @@
-% Current DFS/CSP experiment, shared raw evidence with the report.
+% Light Up content synchronized with the Vietnamese deck; keep main-en styling.
 \begin{frame}{Problem 2: Light Up (Akari)}
 \begin{columns}[c,onlytextwidth]
-\column{.40\textwidth}\centering
-\input{lightup-board}
-\column{.58\textwidth}
-\begin{itemize}
-\item Light every white cell; bulbs shine until a wall or edge.
+\column{.36\textwidth}\centering\input{lightup-board.tex}
+\column{.60\textwidth}\begin{itemize}
+\item Place bulbs on white cells; light travels along rows/columns to a wall.
+\item Every white cell must be lit.
 \item No two bulbs may see each other.
-\item Each numbered wall has exactly its count of adjacent bulbs.
-\item Compare \textbf{DFS} with \textbf{Backtracking + MRV + CP} for a first solution.
-\end{itemize}
-\small Current 7$\times$7 easy sample, seed 70097; validated CSP solution.
+\item A numbered wall has exactly its required adjacent bulbs.
+\end{itemize}\vspace{3mm}
+\textbf{Two algorithms:} DFS and CSP (backtracking + MRV + CP).
 \end{columns}
-\src{Generator: walls-first-witness-v2. A* remains optional in the app; not benchmarked in this experiment.}
+\src{Rules: Nikoli. Figure: a $7\times7$ board, seed 70097, and its CSP solution.}
 \end{frame}
 
-\begin{frame}{Formulation and the comparison}
-\begin{itemize}
-\item State: $W$-bit bulb mask, lit mask, legal-location mask.
-\item Initial state: no bulbs. Goal: full lighting, exact clues, no conflicts.
-\item DFS: first dark cell; row-major candidate ordering; descend immediately.
-\item CSP: fixed-point propagation, dynamic MRV, lighting-gain value ordering.
-\item Same boards and budgets; different pruning and per-node work.
-\end{itemize}
-\vspace{3mm}
-\textbf{Neither DFS nor CSP guarantees minimum bulb count.}\par
-The experiment measures the combined MRV/CP solver, not an isolated MRV ablation.
-\src{Implementation: light\_up\_problem/algorithms/search.py.}
+\begin{frame}{Search problem formulation}
+\small\begin{tabular}{@{}p{.22\textwidth}p{.73\textwidth}@{}}\toprule
+Component & Representation\\\midrule
+State & Bulbs, lit cells and legal bulb locations (bitmasks)\\
+Initial state & No bulbs; CSP may infer forced bulbs at the root\\
+Action & Place a bulb; CSP may choose a combination around a wall\\
+Goal & All white cells lit, no conflicts, all numbered walls satisfied\\
+State space & $2^W$ bulb sets before constraints, for $W$ white cells\\\bottomrule
+\end{tabular}
+\vspace{3mm}\par
+One CSP node may include multiple bulbs placed by propagation.\par
+Both return a first solution; neither minimizes the bulb count.
 \end{frame}
 
-\begin{frame}[fragile]{DFS: accept the first feasible bulb and descend}
-\begin{lstlisting}
+\begin{frame}{Input generation}
+\begin{enumerate}
+\item Choose wall locations using a seed.
+\item Place witness bulbs until every white cell is lit.
+\item Derive wall numbers; leave some walls unnumbered.
+\item Validate the witness solution before returning the board.
+\end{enumerate}
+\vspace{3mm}\small
+4 sizes: $7,10,14,25$; 3 labels; 5 distinct seeds per configuration.\par
+A total of \textbf{60 boards}, each shared by both algorithms.
+\src{easy/normal/hard differ in wall density: 16\%, 10.5\%, 5.5\%. The solver does not know the witness.}
+\end{frame}
+
+\begin{frame}[fragile]{Uninformed search: DFS}
+\begin{lstlisting}[breaklines=true]
 DFS(state):
-  check budgets
+  if limit reached: return LIMIT
   if GOAL(state): return SOLVED
-  target = first dark cell, row-major
+  target = first dark cell in row-major order
   for bulb in legal illuminators(target):
-    if FEASIBLE(place(bulb)):
-      search child immediately
+    child = place(bulb)
+    if FEASIBLE(child):
+      result = DFS(child)
       if solved or limited: return result
-    exclude bulb from later siblings
+    exclude bulb from later sibling choices
   return UNSOLVABLE
 \end{lstlisting}
-\small Explicit frames retain untried candidates; parent links reconstruct the path.
-Backtrack only after the current subtree fails. Worst-case search is exponential.
-\src{depth\_first\_search(); TIMEOUT / NODE\_LIMIT / MEMORY\_LIMIT are not UNSOLVABLE.}
+\small Descend in a fixed order. Prune if a wall lacks available neighbors or a dark cell has no illuminator.
+\src{The implementation replaces recursion with an explicit stack.}
 \end{frame}
 
-\begin{frame}{MRV chooses a constraint; CP forces deductions}
-\small
+\begin{frame}{CP: deduce before branching}
+\begin{columns}[c,onlytextwidth]
+\column{.34\textwidth}\centering
+\begin{tikzpicture}[scale=.8]
+\foreach \x/\y in {-1/0,1/0,0/1,0/-1}{\draw[muted!50](\x-.45,\y-.45)rectangle(\x+.45,\y+.45);}
+\fill[ink](-.45,-.45)rectangle(.45,.45);\node[white]at(0,0){2};
+\fill[orange!85](-1,0)circle(.23);\fill[orange!85](1,0)circle(.23);
+\node[muted]at(0,1){$\times$};\node[muted]at(0,-1){$\times$};
+\end{tikzpicture}\par\vspace{2mm}{\tiny\color{muted}Two bulbs satisfy this wall: forbid its other neighbors.\par}
+\column{.62\textwidth}\small
+\textbf{\texttt{PROPAGATE}: repeat until no change}
 \begin{itemize}
-\item Wall with $u$ available neighbors and deficit $r$: $\binom{u}{r}$ choices.
-\item Dark cell: one choice per legal illuminator. Choose the smallest domain;
-prefer walls on ties; try greater lighting gain first.
-\item CP: satisfied wall $\Rightarrow$ forbid remaining neighbors.
-\item Deficit equals available neighbors $\Rightarrow$ force all their bulbs.
-\item One legal illuminator $\Rightarrow$ force that bulb; exclude its sight lines.
-\item Diagonal deductions remove choices that starve a numbered wall.
+\item Satisfied wall: forbid remaining neighbors.
+\item Wall needs $r$ bulbs and has $r$ available cells: use all.
+\item One illuminator for a dark cell: force that bulb.
+\item A new bulb forbids visible locations; prune cells that starve a wall.
 \end{itemize}
-\vspace{2mm}
-Repeat until no change; any contradiction rejects the branch.
-\src{\_View.select\_mrv\_choices() and \_View.propagate().}
+\vspace{2mm}Contradiction $\Rightarrow$ backtrack. Otherwise, if unsolved $\Rightarrow$ MRV.
+\end{columns}
+\src{Shared state: \texttt{(bulbs, lit, legal)} = placed bulbs, lit cells, remaining legal locations.}
 \end{frame}
 
-\begin{frame}[fragile]{Backtracking + MRV + Constraint Propagation}
-\begin{lstlisting}
-CSP(state):
-  check budgets; propagate to fixed point
-  if contradiction: reject branch
-  if GOAL(state): return SOLVED
-  constraint = minimum remaining choices
-  for choice ordered by lighting gain:
-    apply choice; propagate
-    if consistent: descend immediately
-    if solved or limited: return result
-    restore parent checkpoint
+\begin{frame}{MRV: choose the lowest-scoring constraint}
+\begin{columns}[T,onlytextwidth]
+\column{.48\textwidth}
+\begin{block}{Numbered wall $w$}
+\small $r=k_w-|N(w)\cap bulbs|$: bulbs still needed.\par
+$u=|N(w)\cap legal|$: available neighbors.
+\[
+ m_{\mathrm{wall}}(w)=\binom{u}{r},\quad r>0
+\]
+\centering $u=3,\ r=2\ \Rightarrow\ \boxed{m=3}$
+\end{block}
+\column{.48\textwidth}
+\begin{block}{Dark cell $i$}
+\small $C(i)=V(i)\cap legal$: legal illuminators.\par
+$V(i)$ includes cell $i$ itself.
+\[
+ m_{\mathrm{dark}}(i)=|C(i)|
+\]
+\centering Two illuminators $\Rightarrow\ \boxed{m=2}$
+\end{block}
+\end{columns}
+\vspace{2mm}\centering
+\textbf{Choose the dark cell: $2<3$. Prefer walls on ties.}
+\src{$N(w)$: white neighbors; $k_w$: wall number. Wall scores are computed before filtering conflicting combinations, so actual branch counts may differ.}
+\end{frame}
+
+\begin{frame}{Gain: try branches that light more new cells first}
+\small After MRV selects a constraint, order branches by
+$gain(A)=|(\bigcup_{b\in A}V(b))\cap dark|$ in descending order.
+\begin{columns}[T,onlytextwidth]
+\column{.48\textwidth}\centering
+\textbf{Branch 1: place $(7,7)$, gain = 7}\par\vspace{1mm}
+\input{../report/assets/lightup-gain-70098-a.tex}
+\column{.48\textwidth}\centering
+\textbf{Branch 2: place $(5,7)$, gain = 6}\par\vspace{1mm}
+\input{../report/assets/lightup-gain-70098-b.tex}
+\end{columns}
+\par\vspace{2mm}{\tiny\color{muted}Seed 70098 after root CP. Red outline: dark cell $(6,7)$ with two illuminators. Orange dots: existing bulbs; blue dot: trial bulb; blue shading: newly lit cells.\par}
+\small\textbf{Try $(7,7)$ before $(5,7)$.} Count each cell once, before child CP.
+\src{Do not add gain to the MRV score. Branch 2 forbids illuminator $(7,7)$, already tried in branch 1.}
+\end{frame}
+
+\begin{frame}[fragile]{Backtracking: CP $\rightarrow$ MRV/gain $\rightarrow$ try a branch}
+\begin{lstlisting}[breaklines=true]
+BACKTRACK_MRV_CP(state):
+  if budget exhausted: return LIMIT
+  state, ok = PROPAGATE(state)
+  if not ok: return UNSOLVABLE
+  if GOAL(state): return SOLVED(state)
+  checkpoint = state
+  choices = SELECT_MRV_CHOICES(checkpoint)
+  for child in choices:  # descending gain, before child CP
+    result = BACKTRACK_MRV_CP(child)
+    if result is SOLVED or LIMIT: return result
+    state = checkpoint
   return UNSOLVABLE
 \end{lstlisting}
-\small A checkpoint restores both bulbs and legal domains. A CSP node can contain
-multiple bulb placements, so node counts alone do not measure equal work.
-\src{backtracking\_mrv\_cp(); explicit stack avoids Python recursion limits.}
+\src{\texttt{SELECT\_MRV\_CHOICES}: select a constraint, generate branches and order by gain. Checkpoints store all of \texttt{(bulbs, lit, legal)} after parent CP. The implementation uses an explicit stack.}
 \end{frame}
 
-\begin{frame}{Inputs: five different seeds per configuration}
+\begin{frame}{Implementation and step-by-step demo}
+\begin{enumerate}
+\item Select DFS or CSP, then click Start Search.
+\item Pause and use the arrows to step forward or backward.
+\item CSP also shows inferred bulbs, forbidden cells $\times$, and backtracking.
+\item Compare DFS and CSP: run both on the current board.
+\end{enumerate}
+\vspace{3mm}\small
+A separate worker runs the solver; the UI renders each event.
+\src{Python 3, pygame-ce. Rules: core/; search: algorithms/search.py; UI: ui/app.py.}
+\end{frame}
+
+\begin{frame}{Results: solved boards}
+\centering\small\begin{tabular}{@{}lrrrr@{}}\toprule
+ & \multicolumn{2}{c}{DFS} & \multicolumn{2}{c}{CSP}\\
+Size & Solved & TIMEOUT & Solved & TIMEOUT\\\midrule
+$7\times7$ & 15/15 & 0 & 15/15 & 0\\
+$10\times10$ & 15/15 & 0 & 15/15 & 0\\
+$14\times14$ & 15/15 & 0 & 15/15 & 0\\
+$25\times25$ & 7/15 & 8 & 15/15 & 0\\\midrule
+Total & 52/60 & 8 & 60/60 & 0\\\bottomrule
+\end{tabular}\par\vspace{3mm}
+\raggedright 60 boards $\times$ 2 algorithms = 120 runs. One run per algorithm per board.\par
+Limits: 30 seconds, 500,000 nodes, 512 MiB estimated memory.
+\src{Fresh process per run. No run reached the node or memory limit.}
+\end{frame}
+
+% Mean of raw 2026-10-31-lightup-dfs-csp.csv, five seeds per configuration,
+% including TIMEOUT; labels give SOLVED counts, not the sample size of each mean.
+\begin{frame}{Results: mean attempt duration}
+\centering
+\begin{tikzpicture}[x=.28cm,y=.34cm,font=\scriptsize]
+\draw[muted!20] (0.0000,-.1)--(0.0000,10.1);\node[below,muted] at (0.0000,-.1) {0};
+\draw[muted!20] (5.0000,-.1)--(5.0000,10.1);\node[below,muted] at (5.0000,-.1) {5};
+\draw[muted!20] (10.0000,-.1)--(10.0000,10.1);\node[below,muted] at (10.0000,-.1) {10};
+\draw[muted!20] (15.0000,-.1)--(15.0000,10.1);\node[below,muted] at (15.0000,-.1) {15};
+\draw[muted!20] (20.0000,-.1)--(20.0000,10.1);\node[below,muted] at (20.0000,-.1) {20};
+\draw[muted!20] (25.0000,-.1)--(25.0000,10.1);\node[below,muted] at (25.0000,-.1) {25};
+\draw[muted!20] (30.0000,-.1)--(30.0000,10.1);\node[below,muted] at (30.0000,-.1) {30};
+\node[anchor=east,align=right] at (-.7,8.65) {14 / easy};
+\fill[orange!85!black] (0,9.000) rectangle (0.90696,9.550);
+\node[anchor=west,text=orange!85!black] at (1.05696,9.275) {0.9070 (5/5)};
+\fill[blue] (0,8.150) rectangle (0.09472,8.700);
+\node[anchor=west,text=blue] at (0.24472,8.425) {0.0947 (5/5)};
+\node[anchor=east,align=right] at (-.7,5.95) {25 / easy};
+\fill[orange!85!black] (0,6.300) rectangle (23.79466,6.850);
+\node[anchor=west,text=orange!85!black] at (23.94466,6.575) {23.7947 (2/5)};
+\fill[blue] (0,5.450) rectangle (2.10556,6.000);
+\node[anchor=west,text=blue] at (2.25556,5.725) {2.1056 (5/5)};
+\node[anchor=east,align=right] at (-.7,3.25) {25 / normal};
+\fill[orange!85!black] (0,3.600) rectangle (24.29717,4.150);
+\node[anchor=west,text=orange!85!black] at (24.44717,3.875) {24.2972 (1/5)};
+\fill[blue] (0,2.750) rectangle (1.04439,3.300);
+\node[anchor=west,text=blue] at (1.19439,3.025) {1.0444 (5/5)};
+\node[anchor=east,align=right] at (-.7,0.55) {25 / hard};
+\fill[orange!85!black] (0,0.900) rectangle (7.74997,1.450);
+\node[anchor=west,text=orange!85!black] at (7.89997,1.175) {7.7500 (4/5)};
+\fill[blue] (0,0.050) rectangle (1.04631,0.600);
+\node[anchor=west,text=blue] at (1.19631,0.325) {1.0463 (5/5)};
+\draw[muted] (0,-.1)--(30,-.1);
+\node[anchor=west,muted] at (30.3,-.1) {seconds};
+\node[anchor=west,text=orange!85!black] at (0,11) {\rule{3mm}{2mm} DFS};
+\node[anchor=west,text=blue] at (6,11) {\rule{3mm}{2mm} CSP};
+\node[anchor=east,muted] at (30,11) {Labels: mean (SOLVED runs/5)};
+\end{tikzpicture}
+\src{Arithmetic means over 5 seeds, including TIMEOUT. Values measure time until termination, not completed-solve time for timed-out runs. All 12 configurations are in the report.}
+\end{frame}
+
+\begin{frame}{Results: mean peak Python memory}
+\centering
+\begin{tikzpicture}[x=.28cm,y=.34cm,font=\scriptsize]
+\draw[muted!20] (0.0000,-.1)--(0.0000,10.1);\node[below,muted] at (0.0000,-.1) {0};
+\draw[muted!20] (7.5000,-.1)--(7.5000,10.1);\node[below,muted] at (7.5000,-.1) {1000};
+\draw[muted!20] (15.0000,-.1)--(15.0000,10.1);\node[below,muted] at (15.0000,-.1) {2000};
+\draw[muted!20] (22.5000,-.1)--(22.5000,10.1);\node[below,muted] at (22.5000,-.1) {3000};
+\draw[muted!20] (30.0000,-.1)--(30.0000,10.1);\node[below,muted] at (30.0000,-.1) {4000};
+\node[anchor=east,align=right] at (-.7,8.65) {14 / easy};
+\fill[orange!85!black] (0,9.000) rectangle (1.71653,9.550);
+\node[anchor=west,text=orange!85!black] at (1.86653,9.275) {228.9 (5/5)};
+\fill[blue] (0,8.150) rectangle (0.81218,8.700);
+\node[anchor=west,text=blue] at (0.96218,8.425) {108.3 (5/5)};
+\node[anchor=east,align=right] at (-.7,5.95) {25 / easy};
+\fill[orange!85!black] (0,6.300) rectangle (16.44688,6.850);
+\node[anchor=west,text=orange!85!black] at (16.59688,6.575) {2192.9 (2/5)};
+\fill[blue] (0,5.450) rectangle (4.34916,6.000);
+\node[anchor=west,text=blue] at (4.49916,5.725) {579.9 (5/5)};
+\node[anchor=east,align=right] at (-.7,3.25) {25 / normal};
+\fill[orange!85!black] (0,3.600) rectangle (26.41534,4.150);
+\node[anchor=west,text=orange!85!black] at (26.56534,3.875) {3522.0 (1/5)};
+\fill[blue] (0,2.750) rectangle (5.19749,3.300);
+\node[anchor=west,text=blue] at (5.34749,3.025) {693.0 (5/5)};
+\node[anchor=east,align=right] at (-.7,0.55) {25 / hard};
+\fill[orange!85!black] (0,0.900) rectangle (9.51490,1.450);
+\node[anchor=west,text=orange!85!black] at (9.66490,1.175) {1268.7 (4/5)};
+\fill[blue] (0,0.050) rectangle (6.54200,0.600);
+\node[anchor=west,text=blue] at (6.69200,0.325) {872.3 (5/5)};
+\draw[muted] (0,-.1)--(30,-.1);
+\node[anchor=west,muted] at (30.3,-.1) {KiB};
+\node[anchor=west,text=orange!85!black] at (0,11) {\rule{3mm}{2mm} DFS};
+\node[anchor=west,text=blue] at (6,11) {\rule{3mm}{2mm} CSP};
+\node[anchor=east,muted] at (30,11) {Labels: mean (SOLVED runs/5)};
+\end{tikzpicture}
+\src{Mean peak Python allocation over 5 seeds, including TIMEOUT; not process RAM. Uses the same runs as the duration chart.}
+\end{frame}
+
+\begin{frame}{Discussion}
 \begin{itemize}
-\item Walls first; place witness bulbs on randomly chosen dark cells until lit.
-\item Derive clues; keep about 25\% of walls unnumbered; independently validate witness.
-\item Sizes 7/10/14/25 $\times$ easy/normal/hard $\times$ 5 seeds = \textbf{60 boards}.
-\item Wall density: 16\% / 10.5\% / 5.5\%; uniqueness is not checked.
-\item Both solvers receive the same exact board for every seed.
+\item CSP solves 60/60 boards, DFS 52/60; all 8 TIMEOUTs occur at $25\times25$.
+\item Size 25: mean expanded nodes are about 2\,408--13\,407 for DFS and 34--96 for CSP; a CSP node may infer multiple bulbs.
+\item Among 52 jointly solved pairs: DFS is faster on 37, CSP on 15. CP overhead can outweigh its benefit on small boards.
 \end{itemize}
-\vspace{3mm}
-Seed = size $\times$ 10,000 + difficulty index $\times$ 97 + offset (0--4).\par
-\small Difficulty indices are 1/2/3. These are five inputs, not five repeats of one input.
-\src{Exact JSON, seeds and SHA-256 hashes: 2026-10-31-lightup-dfs-csp-manifest.json.}
-\end{frame}
-
-\begin{frame}{Visual demonstration}
-\begin{itemize}
-\item DFS / A* / CSP (MRV + CP), Start Search, Pause, Resume, arrows.
-\item Full event history at \textbf{2 / 8 / 30 steps/s}; no dropped steps.
-\item CSP: each forced bulb and domain reduction, including initial propagation.
-\item Forbidden dark cells show $\times$ independently of manual notes.
-\item Backtracking restores bulbs and domains; final result waits for the trace.
-\end{itemize}
-\vspace{3mm}
-\small Spawned workers keep the UI responsive. Visualization has no timeout;
-node/memory caps remain. The experiment retains all three limits.
-\src{ui/app.py + worker.py. The in-app Compare button still compares DFS/A*.}
-\end{frame}
-
-\begin{frame}{Measurement protocol: 120 runs, unchanged limits}
-\small
-\begin{itemize}
-\item 60 boards $\times$ DFS/CSP; one run per algorithm per seed; sequential fresh processes.
-\item Alternate algorithm order on successive seeds. No animation or trace.
-\item \textbf{30 s / 500,000 expanded nodes / 512 MiB estimated memory} for both.
-\item Solver time with tracemalloc active; peak Python allocation, not RSS.
-\item Generation/startup excluded; independently validate every SOLVED result.
-\item Record \texttt{TIMEOUT}, \texttt{NODE\_LIMIT}, \texttt{MEMORY\_LIMIT} separately.
-\end{itemize}
-\vspace{2mm}
-A stopped run is neither a completed solve nor proof of unsolvability.\par
-Table times are medians of all attempts; solved-only medians are in the JSON summary.
-\src{31 October 2026; CSV + summary + environment/source/input manifest under docs/benchmarks/.}
-\end{frame}
-
-\begin{frame}{Results: 7 / 10}
-\small\centering
-\begin{tabular}{@{}lcrrcrr@{}}
-\toprule
-& \multicolumn{3}{c}{DFS} & \multicolumn{3}{c}{CSP (MRV + CP)}\\
-Size / level & S/5 & s & KiB & S/5 & s & KiB\\
-\midrule
-7 easy & 5/5 & 0.0075 & 24.9 & 5/5 & 0.0066 & 25.2\\
-7 normal & 5/5 & 0.0066 & 26.8 & 5/5 & 0.0103 & 29.0\\
-7 hard & 5/5 & 0.0074 & 27.3 & 5/5 & 0.0107 & 30.5\\
-\addlinespace[2pt]
-10 easy & 5/5 & 0.0229 & 55.9 & 5/5 & 0.0288 & 56.2\\
-10 normal & 5/5 & 0.0218 & 60.0 & 5/5 & 0.0309 & 61.8\\
-10 hard & 5/5 & 0.0229 & 62.4 & 5/5 & 0.0314 & 67.8\\
-\addlinespace[2pt]
-\bottomrule
-\end{tabular}
-\vspace{3mm}\par
-\footnotesize S: SOLVED runs. Medians over 5 seeds, including duration of stopped attempts.
-\par KiB is traced peak allocation, not RSS or the solver memory estimate.
-\src{31/10/2026; 2026-10-31-lightup-dfs-csp.csv; 30 s / 500,000 nodes / 512 MiB.}
-\end{frame}
-
-\begin{frame}{Results: 14 / 25}
-\small\centering
-\begin{tabular}{@{}lcrrcrr@{}}
-\toprule
-& \multicolumn{3}{c}{DFS} & \multicolumn{3}{c}{CSP (MRV + CP)}\\
-Size / level & S/5 & s & KiB & S/5 & s & KiB\\
-\midrule
-14 easy & 5/5 & 0.2330 & 135.3 & 5/5 & 0.0801 & 109.1\\
-14 normal & 5/5 & 0.0724 & 117.3 & 5/5 & 0.1030 & 123.5\\
-14 hard & 5/5 & 0.0832 & 126.1 & 5/5 & 0.1168 & 134.6\\
-\addlinespace[2pt]
-25 easy & 2/5 & 30.0001 & 2237.0 & 5/5 & 0.9558 & 562.1\\
-25 normal & 1/5 & 30.0004 & 3583.3 & 5/5 & 1.0274 & 696.9\\
-25 hard & 4/5 & 0.7835 & 870.3 & 5/5 & 1.0421 & 868.0\\
-\addlinespace[2pt]
-\bottomrule
-\end{tabular}
-\vspace{3mm}\par
-\footnotesize S: SOLVED runs. Medians over 5 seeds, including duration of stopped attempts.
-\par KiB is traced peak allocation, not RSS or the solver memory estimate.
-\src{31/10/2026; 2026-10-31-lightup-dfs-csp.csv; 30 s / 500,000 nodes / 512 MiB.}
-\end{frame}
-
-\begin{frame}{Interpreting the measured results}
-\begin{itemize}
-\item Solved: \textbf{DFS 52/60}, \textbf{CSP 60/60}; TIMEOUT: 8 / 0.
-\item NODE\_LIMIT / MEMORY\_LIMIT: \textbf{0 each} for both solvers; both caps remain enabled.
-\item Among 52 jointly solved pairs, CSP is faster on 15; median
-paired $t_{DFS}/t_{CSP}=0.73$. Excludes stopped pairs.
-\item Small well-pruned boards may favor DFS; CP can cost more per node.
-\item CSP can reduce branching substantially. A node can include many forced bulbs.
-\end{itemize}
-\vspace{2mm}
-Five seeds are a small sample; wall density does not order solve difficulty.
-\src{New current-generator DFS/CSP data. Historical 25 October DFS/A* data are not mixed in.}
-\end{frame}
-
-\begin{frame}{Limitations and next experiments}
-\begin{itemize}
-\item No optimal-bulb or uniqueness claim for these first-solution solvers.
-\item Tracemalloc adds overhead and does not measure RSS.
-\item Five seeds per configuration: expand the sample and add unsolvable boards.
-\item Ablate CP/MRV and measure uninstrumented runtime separately.
-\end{itemize}
-\vspace{4mm}
-\small Rules: \url{https://www.puzzle-light-up.com/}\par
-Russell \& Norvig, \emph{Artificial Intelligence: A Modern Approach}, Ch. 3 and 6.\par
-Implementation and analysis: \texttt{docs/lightup-analysis.md}.
+\vspace{3mm}\textbf{Limitations:} only 5 seeds per configuration; difficulty labels use wall density only; MRV, gain and CP have not been isolated in ablations.
 \end{frame}

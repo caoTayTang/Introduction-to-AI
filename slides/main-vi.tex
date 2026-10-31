@@ -5,6 +5,7 @@
 \setsansfont{DejaVu Sans}[Scale=0.92]
 \setmonofont{DejaVu Sans Mono}[Scale=0.86]
 \usetikzlibrary{arrows.meta,positioning,calc}
+\input{../report/metadata.tex}
 \definecolor{blue}{HTML}{285BC2}
 \definecolor{water}{HTML}{258BD2}
 \definecolor{ink}{HTML}{25282D}
@@ -53,13 +54,27 @@
 {\Large Giải thuật tìm kiếm cho hai bài toán Logic Puzzle}\par\vspace{7mm}
 Nhập môn Trí tuệ nhân tạo --- BTL1 (HK1 2026--2027)\par\vspace{3mm}
 \small DFS (mù) + Greedy Best-First (Pipes)\quad$\cdot$\quad DFS + MRV/CP (Light Up)\par\vspace{2mm}
-\footnotesize [Nhóm --- thành viên điền tại đây]
+\footnotesize Lớp \ClassName\quad$\cdot$\quad\CourseCode
 \column{.33\textwidth}
 \centering
 \begin{tikzpicture}[scale=.62]
 \board{2,12,2,12,4,5,4,5,7,11,15,13,3,8,1,1}{water}
 \end{tikzpicture}
 \end{columns}
+\end{frame}
+
+\begin{frame}{Giảng viên và thành viên nhóm}
+\textbf{Môn học:} \CourseName\ (\CourseCode)\par\vspace{3mm}
+\textbf{Giảng viên:} \InstructorName\par\vspace{2mm}
+\textbf{Lớp:} \ClassName\quad$\cdot$\quad\textbf{Học kỳ:} \Semester
+\vspace{5mm}
+\begin{center}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{@{}ll@{}}\toprule
+\textbf{Họ và tên} & \textbf{MSSV}\\\midrule
+\StudentRows\\\bottomrule
+\end{tabular}
+\end{center}
 \end{frame}
 
 \input{pipes-vi}

@@ -59,7 +59,8 @@ class AppTests(unittest.TestCase):
             app._start_search()
         self.assertEqual(context.Process.call_args.kwargs["args"][1], "CSP")
         self.assertEqual(app.search_stats["algorithm"], "CSP")
-        self.assertEqual(app.buttons["benchmark"].text, "Compare DFS and A*")
+        self.assertEqual(app.buttons["benchmark"].text, "Compare DFS and CSP")
+        self.assertNotIn(("A*", "A*"), app.algorithm_menu.options_list)
 
     def test_csp_history_restores_forbidden_cells_without_changing_manual_notes(self):
         app = self.app
@@ -131,11 +132,9 @@ class AppTests(unittest.TestCase):
         self.assertFalse(app.search_forbidden)
         self.assertEqual(app.algorithm_menu.selected_option, (label, label))
 
-    def test_only_astar_displays_heuristic_scores(self):
-        for algorithm in ("DFS", "CSP", "A*"):
-            self.app.search_stats = {"algorithm": algorithm, "g": 1, "h": 2, "f": 3}
-            self.app._update_labels()
-            self.assertEqual(bool(self.app.labels["score"].text), algorithm == "A*")
+    def test_visualizer_algorithm_menu_only_offers_dfs_and_csp(self):
+        options = {option[0] for option in self.app.algorithm_menu.options_list}
+        self.assertEqual(options, {"DFS", "CSP (MRV + CP)"})
 
     def test_each_rate_shows_one_event_per_tick_and_holds_result_until_next_tick(self):
         for rate in (2, 8, 30):

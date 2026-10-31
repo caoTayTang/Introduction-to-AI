@@ -252,7 +252,7 @@ DFS(state):
 \end{frame}
 
 \subsection{Giải thuật tìm kiếm heuristic}
-\begin{frame}{Giải thuật tìm kiếm heuristic: MRV và CP}
+\begin{frame}{CP: suy luận trước khi chọn nhánh}
 \begin{columns}[c,onlytextwidth]
 \column{.34\textwidth}\centering
 \begin{tikzpicture}[scale=.8]
@@ -262,32 +262,110 @@ DFS(state):
 \node[muted]at(0,1){$\times$};\node[muted]at(0,-1){$\times$};
 \end{tikzpicture}\slidenote{Tường đủ 2 bóng: cấm hai ô kề còn lại.}
 \column{.62\textwidth}\small
-\textbf{CP: lan truyền quyết định bắt buộc}
+\textbf{\texttt{PROPAGATE}: lặp đến khi không đổi}
 \begin{itemize}
+\item Tường đủ bóng: cấm các ô kề còn lại.
 \item Tường thiếu $r$ bóng, còn đúng $r$ ô: đặt tất cả.
-\item Ô tối còn một nguồn chiếu: đặt bóng tại nguồn đó.
-\item Bóng mới cấm các vị trí nhìn thấy nhau.
+\item Ô tối còn một nguồn chiếu: đặt bóng tại đó.
+\item Bóng mới cấm các vị trí nhìn thấy nó; loại ô gây thiếu chỗ quanh tường.
 \end{itemize}
-\vspace{2mm}Lặp đến khi không đổi; mâu thuẫn thì quay lui.
+\vspace{2mm}Mâu thuẫn $\Rightarrow$ quay lui. Chưa xong $\Rightarrow$ MRV.
 \end{columns}
+\slidenote{Trạng thái dùng chung: \texttt{(bulbs, lit, legal)} = tập bóng, ô sáng, vị trí còn được phép đặt.}
 \end{frame}
 
-\begin{frame}[fragile]{Giải thuật tìm kiếm heuristic: chọn nhánh bằng MRV}
-\small Chọn ràng buộc ít lựa chọn nhất: đếm nguồn chiếu của ô tối,
-hoặc $\binom{u}{r}$ tổ hợp quanh tường còn $u$ ô và thiếu $r$ bóng.
-\begin{lstlisting}
-BACKTRACK(state):
-  check limits; propagate until no change
-  if contradiction: return failure
-  if GOAL(state): return SOLVED
-  select constraint by MRV
-  for choice ordered by lighting gain:
-    result = BACKTRACK(apply(choice, checkpoint))
-    if solved or limited: return result
-    restore checkpoint
-  return failure
+\begin{frame}{MRV: chọn ràng buộc có điểm nhỏ nhất}
+\begin{columns}[T,onlytextwidth]
+\column{.48\textwidth}
+\begin{block}{Tường số $w$}
+\small $r=k_w-|N(w)\cap bulbs|$: bóng còn thiếu.\par
+$u=|N(w)\cap legal|$: ô kề còn được đặt.
+\[
+ m_{\mathrm{wall}}(w)=\binom{u}{r},\quad r>0
+\]
+\centering $u=3,\ r=2\ \Rightarrow\ \boxed{m=3}$
+\end{block}
+\column{.48\textwidth}
+\begin{block}{Ô tối $i$}
+\small $C(i)=V(i)\cap legal$: các nguồn chiếu.\par
+$V(i)$ gồm cả ô $i$.
+\[
+ m_{\mathrm{dark}}(i)=|C(i)|
+\]
+\centering Hai nguồn chiếu $\Rightarrow\ \boxed{m=2}$
+\end{block}
+\end{columns}
+\vspace{2mm}\centering
+\textbf{Chọn ô tối: $2<3$. Bằng điểm thì ưu tiên tường.}
+\slidenote{$N(w)$: ô trắng kề tường; $k_w$: số trên tường. Điểm tường tính trước khi loại tổ hợp bóng chiếu nhau; có thể khác số nhánh thực tế.}
+\end{frame}
+
+\begin{frame}{Gain: thử nhánh chiếu sáng thêm nhiều ô trước}
+\small Sau khi chọn ràng buộc bằng MRV, xếp nhánh theo
+$gain(A)=|(\bigcup_{b\in A}V(b))\cap dark|$ giảm dần.
+\begin{columns}[T,onlytextwidth]
+\column{.48\textwidth}\centering
+\textbf{Nhánh 1: đặt $(7,7)$, gain = 7}\par\vspace{1mm}
+\begin{tikzpicture}[x=.35cm,y=-.35cm,font=\tiny]
+% Snapshot after root CP: 7x7 easy, seed 70098; coordinates below are zero-based.
+\foreach \c/\r in {0/0,2/0,3/0,4/0,5/0,6/0,2/1,3/1,4/1,6/1,0/2,1/2,3/2,4/2,5/2,0/3,1/3,2/3,3/3,4/3,5/3,6/3,0/4,2/4,5/4,0/5,2/5,0/6,2/6}{\fill[orange!12] (\c,\r) rectangle ++(1,1);}
+\foreach \c/\r in {6/4,6/5,1/6,3/6,4/6,5/6,6/6}{\fill[HCMUTblue!30] (\c,\r) rectangle ++(1,1);}
+\foreach \c/\r/\n in {1/0/-1,0/1/2,1/1/1,5/1/3,2/2/2,6/2/-1,1/5/0,5/5/0}{
+  \fill[ink] (\c,\r) rectangle ++(1,1);
+  \ifnum\n>-1\node[white] at (\c+.5,\r+.5) {\n};\fi}
+\foreach \i in {0,...,7}{
+  \draw[muted!40,thin] (\i,0)--(\i,7);
+  \draw[muted!40,thin] (0,\i)--(7,\i);}
+\foreach \c/\r in {0/0,5/0,2/1,6/1,0/2,5/2,2/3}{\fill[orange!85!black] (\c+.5,\r+.5) circle (.16);}
+\fill[HCMUTblue] (6.5,6.5) circle (.22);
+\draw[red!80!black,very thick] (6.08,5.08) rectangle (6.92,5.92);
+\foreach \i in {0,...,6}{
+  \pgfmathtruncatemacro{\labelnum}{\i+1}
+  \node[muted] at (\i+.5,-.35) {\labelnum};
+  \node[muted] at (-.35,\i+.5) {\labelnum};}
+\end{tikzpicture}
+\column{.48\textwidth}\centering
+\textbf{Nhánh 2: đặt $(5,7)$, gain = 6}\par\vspace{1mm}
+\begin{tikzpicture}[x=.35cm,y=-.35cm,font=\tiny]
+% Snapshot after root CP: 7x7 easy, seed 70098; coordinates below are zero-based.
+\foreach \c/\r in {0/0,2/0,3/0,4/0,5/0,6/0,2/1,3/1,4/1,6/1,0/2,1/2,3/2,4/2,5/2,0/3,1/3,2/3,3/3,4/3,5/3,6/3,0/4,2/4,5/4,0/5,2/5,0/6,2/6}{\fill[orange!12] (\c,\r) rectangle ++(1,1);}
+\foreach \c/\r in {1/4,3/4,4/4,6/4,6/5,6/6}{\fill[HCMUTblue!30] (\c,\r) rectangle ++(1,1);}
+\foreach \c/\r/\n in {1/0/-1,0/1/2,1/1/1,5/1/3,2/2/2,6/2/-1,1/5/0,5/5/0}{
+  \fill[ink] (\c,\r) rectangle ++(1,1);
+  \ifnum\n>-1\node[white] at (\c+.5,\r+.5) {\n};\fi}
+\foreach \i in {0,...,7}{
+  \draw[muted!40,thin] (\i,0)--(\i,7);
+  \draw[muted!40,thin] (0,\i)--(7,\i);}
+\foreach \c/\r in {0/0,5/0,2/1,6/1,0/2,5/2,2/3}{\fill[orange!85!black] (\c+.5,\r+.5) circle (.16);}
+\fill[HCMUTblue] (6.5,4.5) circle (.22);
+\draw[red!80!black,very thick] (6.08,5.08) rectangle (6.92,5.92);
+\foreach \i in {0,...,6}{
+  \pgfmathtruncatemacro{\labelnum}{\i+1}
+  \node[muted] at (\i+.5,-.35) {\labelnum};
+  \node[muted] at (-.35,\i+.5) {\labelnum};}
+\end{tikzpicture}
+\end{columns}
+\slidenote{Seed 70098, sau CP ở gốc. Viền đỏ: ô tối $(6,7)$ có hai nguồn chiếu. Chấm cam: bóng đã đặt; chấm xanh: bóng thử; nền xanh: ô mới sáng.}
+\small\textbf{Thử $(7,7)$ trước $(5,7)$.} Đếm mỗi ô một lần, trước CP của con.
+\slidenote{Gain không cộng vào điểm MRV. Nhánh 2 cấm nguồn $(7,7)$ đã thử ở nhánh 1.}
+\end{frame}
+
+\begin{frame}[fragile]{Backtracking: CP $\rightarrow$ MRV/gain $\rightarrow$ thử nhánh}
+\begin{lstlisting}[basicstyle=\ttfamily\scriptsize]
+BACKTRACK_MRV_CP(state):
+  if budget exhausted: return LIMIT
+  state, ok = PROPAGATE(state)
+  if not ok: return UNSOLVABLE
+  if GOAL(state): return SOLVED(state)
+  checkpoint = state
+  choices = SELECT_MRV_CHOICES(checkpoint)
+  for child in choices:  # descending gain, before child CP
+    result = BACKTRACK_MRV_CP(child)
+    if result is SOLVED or LIMIT: return result
+    state = checkpoint
+  return UNSOLVABLE
 \end{lstlisting}
-\slidenote{Bằng điểm thì ưu tiên tường. Lựa chọn chiếu sáng thêm nhiều ô được thử trước.}
+\slidenote{\texttt{SELECT\_MRV\_CHOICES}: chọn ràng buộc, sinh nhánh và xếp gain. Checkpoint giữ đủ \texttt{(bulbs, lit, legal)} sau CP của cha. Code dùng stack thay đệ quy.}
 \end{frame}
 
 \subsection{Hiện thực và minh họa từng bước}
@@ -319,30 +397,92 @@ Giới hạn: 30 giây, 500.000 node, 512 MiB ước lượng.
 \slidenote{Mỗi lượt chạy trong process mới. Không lượt nào chạm giới hạn nút hoặc bộ nhớ.}
 \end{frame}
 
-\begin{frame}{Kết quả thực nghiệm: thời gian và bộ nhớ}
-\centering\small
-\begin{tabular}{@{}llrrr@{}}\toprule
-Input (cỡ/nhãn) & Giải thuật & Giải được & Giây & KiB\\\midrule
-14 / easy & DFS & 5/5 & 0.2330 & 135.3\\
-          & CSP & 5/5 & 0.0801 & 109.1\\
-25 / easy & DFS & 2/5 & 30.0001 & 2237.0\\
-          & CSP & 5/5 & 0.9558 & 562.1\\
-25 / normal & DFS & 1/5 & 30.0004 & 3583.3\\
-            & CSP & 5/5 & 1.0274 & 696.9\\
-25 / hard & DFS & 4/5 & 0.7835 & 870.3\\
-          & CSP & 5/5 & 1.0421 & 868.0\\\bottomrule
-\end{tabular}\par\vspace{2mm}
-\raggedright\scriptsize Trung vị 5 seed, tính cả lượt TIMEOUT (30 giây là lúc bị dừng). Bàn 7 và 10: hai giải thuật đều dưới 0.04 giây. Bảng đầy đủ trong báo cáo.
+% Mean of raw 2026-10-31-lightup-dfs-csp.csv, five seeds per configuration,
+% including TIMEOUT; labels give SOLVED counts, not the sample size of each mean.
+\begin{frame}{Kết quả: thời lượng trung bình}
+\centering
+\begin{tikzpicture}[x=.28cm,y=.34cm,font=\scriptsize]
+\draw[muted!20] (0.0000,-.1)--(0.0000,10.1);\node[below,muted] at (0.0000,-.1) {0};
+\draw[muted!20] (5.0000,-.1)--(5.0000,10.1);\node[below,muted] at (5.0000,-.1) {5};
+\draw[muted!20] (10.0000,-.1)--(10.0000,10.1);\node[below,muted] at (10.0000,-.1) {10};
+\draw[muted!20] (15.0000,-.1)--(15.0000,10.1);\node[below,muted] at (15.0000,-.1) {15};
+\draw[muted!20] (20.0000,-.1)--(20.0000,10.1);\node[below,muted] at (20.0000,-.1) {20};
+\draw[muted!20] (25.0000,-.1)--(25.0000,10.1);\node[below,muted] at (25.0000,-.1) {25};
+\draw[muted!20] (30.0000,-.1)--(30.0000,10.1);\node[below,muted] at (30.0000,-.1) {30};
+\node[anchor=east,align=right] at (-.7,8.65) {14 / easy};
+\fill[orange!85!black] (0,9.000) rectangle (0.90696,9.550);
+\node[anchor=west,text=orange!85!black] at (1.05696,9.275) {0.9070 (5/5)};
+\fill[HCMUTblue] (0,8.150) rectangle (0.09472,8.700);
+\node[anchor=west,text=HCMUTblue] at (0.24472,8.425) {0.0947 (5/5)};
+\node[anchor=east,align=right] at (-.7,5.95) {25 / easy};
+\fill[orange!85!black] (0,6.300) rectangle (23.79466,6.850);
+\node[anchor=west,text=orange!85!black] at (23.94466,6.575) {23.7947 (2/5)};
+\fill[HCMUTblue] (0,5.450) rectangle (2.10556,6.000);
+\node[anchor=west,text=HCMUTblue] at (2.25556,5.725) {2.1056 (5/5)};
+\node[anchor=east,align=right] at (-.7,3.25) {25 / normal};
+\fill[orange!85!black] (0,3.600) rectangle (24.29717,4.150);
+\node[anchor=west,text=orange!85!black] at (24.44717,3.875) {24.2972 (1/5)};
+\fill[HCMUTblue] (0,2.750) rectangle (1.04439,3.300);
+\node[anchor=west,text=HCMUTblue] at (1.19439,3.025) {1.0444 (5/5)};
+\node[anchor=east,align=right] at (-.7,0.55) {25 / hard};
+\fill[orange!85!black] (0,0.900) rectangle (7.74997,1.450);
+\node[anchor=west,text=orange!85!black] at (7.89997,1.175) {7.7500 (4/5)};
+\fill[HCMUTblue] (0,0.050) rectangle (1.04631,0.600);
+\node[anchor=west,text=HCMUTblue] at (1.19631,0.325) {1.0463 (5/5)};
+\draw[muted] (0,-.1)--(30,-.1);
+\node[anchor=west,muted] at (30.3,-.1) {giây};
+\node[anchor=west,text=orange!85!black] at (0,11) {\rule{3mm}{2mm} DFS};
+\node[anchor=west,text=HCMUTblue] at (6,11) {\rule{3mm}{2mm} CSP};
+\node[anchor=east,muted] at (30,11) {Nhãn: mean (số lượt SOLVED/5)};
+\end{tikzpicture}
+\slidenote{Trung bình cộng trên 5 seed, tính cả TIMEOUT. Đây là thời lượng đến lúc dừng; không phải thời gian giải xong khi có TIMEOUT. Bảng đủ 12 cấu hình nằm trong báo cáo.}
+\end{frame}
+
+\begin{frame}{Kết quả: đỉnh bộ nhớ Python trung bình}
+\centering
+\begin{tikzpicture}[x=.28cm,y=.34cm,font=\scriptsize]
+\draw[muted!20] (0.0000,-.1)--(0.0000,10.1);\node[below,muted] at (0.0000,-.1) {0};
+\draw[muted!20] (7.5000,-.1)--(7.5000,10.1);\node[below,muted] at (7.5000,-.1) {1000};
+\draw[muted!20] (15.0000,-.1)--(15.0000,10.1);\node[below,muted] at (15.0000,-.1) {2000};
+\draw[muted!20] (22.5000,-.1)--(22.5000,10.1);\node[below,muted] at (22.5000,-.1) {3000};
+\draw[muted!20] (30.0000,-.1)--(30.0000,10.1);\node[below,muted] at (30.0000,-.1) {4000};
+\node[anchor=east,align=right] at (-.7,8.65) {14 / easy};
+\fill[orange!85!black] (0,9.000) rectangle (1.71653,9.550);
+\node[anchor=west,text=orange!85!black] at (1.86653,9.275) {228.9 (5/5)};
+\fill[HCMUTblue] (0,8.150) rectangle (0.81218,8.700);
+\node[anchor=west,text=HCMUTblue] at (0.96218,8.425) {108.3 (5/5)};
+\node[anchor=east,align=right] at (-.7,5.95) {25 / easy};
+\fill[orange!85!black] (0,6.300) rectangle (16.44688,6.850);
+\node[anchor=west,text=orange!85!black] at (16.59688,6.575) {2192.9 (2/5)};
+\fill[HCMUTblue] (0,5.450) rectangle (4.34916,6.000);
+\node[anchor=west,text=HCMUTblue] at (4.49916,5.725) {579.9 (5/5)};
+\node[anchor=east,align=right] at (-.7,3.25) {25 / normal};
+\fill[orange!85!black] (0,3.600) rectangle (26.41534,4.150);
+\node[anchor=west,text=orange!85!black] at (26.56534,3.875) {3522.0 (1/5)};
+\fill[HCMUTblue] (0,2.750) rectangle (5.19749,3.300);
+\node[anchor=west,text=HCMUTblue] at (5.34749,3.025) {693.0 (5/5)};
+\node[anchor=east,align=right] at (-.7,0.55) {25 / hard};
+\fill[orange!85!black] (0,0.900) rectangle (9.51490,1.450);
+\node[anchor=west,text=orange!85!black] at (9.66490,1.175) {1268.7 (4/5)};
+\fill[HCMUTblue] (0,0.050) rectangle (6.54200,0.600);
+\node[anchor=west,text=HCMUTblue] at (6.69200,0.325) {872.3 (5/5)};
+\draw[muted] (0,-.1)--(30,-.1);
+\node[anchor=west,muted] at (30.3,-.1) {KiB};
+\node[anchor=west,text=orange!85!black] at (0,11) {\rule{3mm}{2mm} DFS};
+\node[anchor=west,text=HCMUTblue] at (6,11) {\rule{3mm}{2mm} CSP};
+\node[anchor=east,muted] at (30,11) {Nhãn: mean (số lượt SOLVED/5)};
+\end{tikzpicture}
+\slidenote{Trung bình đỉnh cấp phát Python qua 5 seed, tính cả TIMEOUT; không phải RAM cả process. Cùng tập lượt chạy với biểu đồ thời lượng.}
 \end{frame}
 
 \subsection{Nhận xét}
 \begin{frame}{Nhận xét}
 \begin{itemize}
 \item CSP giải đủ 60/60 bàn, DFS 52/60; 8 lượt TIMEOUT đều ở bàn $25\times25$.
-\item Bàn lớn: DFS mở hàng nghìn nút, CSP chỉ khoảng 30 nút nhờ suy ra bóng bắt buộc.
-\item Bàn nhỏ: DFS lại nhanh hơn (37/52 bàn) vì CSP tốn công suy luận ở mỗi nút.
+\item Cỡ 25: mean số nút DFS khoảng 2\,408--13\,407, CSP khoảng 34--96; mỗi nút CSP có thể suy ra nhiều bóng.
+\item Trong 52 cặp cùng giải được: DFS nhanh hơn ở 37 bàn, CSP ở 15 bàn. Chi phí CP có thể lấn lợi ích trên bàn nhỏ.
 \end{itemize}
-\vspace{3mm}\textbf{Hạn chế:} mỗi cấu hình mới 5 seed; nhãn độ khó chỉ dựa trên số tường; chưa đo riêng tác dụng MRV và CP.
+\vspace{3mm}\textbf{Hạn chế:} mỗi cấu hình mới 5 seed; nhãn độ khó chỉ dựa trên số tường; chưa đo riêng tác dụng MRV, gain và CP.
 \end{frame}
 
 \HCMUTgamefalse
@@ -350,7 +490,7 @@ Input (cỡ/nhãn) & Giải thuật & Giải được & Giây & KiB\\\midrule
 \begin{itemize}
 \item Hai game viết bằng Python 3, có chơi tay và xem giải thuật chạy từng bước.
 \item Pipes: DFS và Greedy giải hết 9 bàn, tốc độ gần như nhau.
-\item Light Up: CSP giải 60/60, DFS 52/60; CSP vượt trội ở bàn lớn.
+\item Light Up: CSP giải 60/60, DFS 52/60. Cỡ 25: mean CSP 1.04--2.11 giây; DFS có 8 lượt TIMEOUT.
 \item Heuristic có ích khi không gian tìm kiếm lớn; ở bài dễ, chi phí tính heuristic có thể lấn phần tiết kiệm được.
 \end{itemize}
 \vspace{3mm}\textbf{Hướng tiếp theo:} thêm bàn khó và vô nghiệm, đo nhiều seed hơn, đo riêng tác dụng từng kỹ thuật.

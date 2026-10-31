@@ -12,7 +12,6 @@ from .algorithms.search import (
     SearchLimits,
     SearchResult,
     SearchStatus,
-    astar,
     backtracking_mrv_cp,
     depth_first_search,
 )
@@ -25,7 +24,7 @@ from .worker import solver_worker
 class WorkerTests(unittest.TestCase):
     def test_spawn_stream_matches_full_trace_through_single_slot_queue(self):
         puzzle = Puzzle(((None, None), (None, None)))
-        for algorithm, solver in (("DFS", depth_first_search), ("A*", astar), ("CSP", backtracking_mrv_cp)):
+        for algorithm, solver in (("DFS", depth_first_search), ("CSP", backtracking_mrv_cp)):
             with self.subTest(algorithm=algorithm):
                 if algorithm == "CSP":
                     puzzle = Puzzle(((None, None, None), (None, 0, None), (None, None, None)))
@@ -115,14 +114,17 @@ class WorkerTests(unittest.TestCase):
                         process.join(timeout=1)
                     messages.close()
 
-    def test_unknown_algorithm_reports_error_without_running_astar(self):
+    def test_astar_is_not_dispatchable_from_visualizer_worker(self):
         messages = Mock()
-        with patch("light_up_problem.worker.astar") as search:
-            solver_worker(Puzzle(((None,),)), "unknown", SearchLimits(), messages, Event(), Event(), Event())
-        search.assert_not_called()
+        with patch("light_up_problem.worker.depth_first_search") as dfs, patch(
+            "light_up_problem.worker.backtracking_mrv_cp"
+        ) as csp:
+            solver_worker(Puzzle(((None,),)), "A*", SearchLimits(), messages, Event(), Event(), Event())
+        dfs.assert_not_called()
+        csp.assert_not_called()
         kind, payload = messages.put.call_args.args[0]
         self.assertEqual(kind, "error")
-        self.assertIn("Unknown search algorithm: unknown", payload)
+        self.assertIn("Unknown search algorithm: A*", payload)
 
     def test_full_queue_retries_progress_result_and_errors_until_delivered(self):
         puzzle = Puzzle(((None,),))
@@ -175,7 +177,7 @@ class WorkerTests(unittest.TestCase):
             target=solver_worker,
             args=(
                 Puzzle(((None, None), (None, None))),
-                "A*",
+                "DFS",
                 SearchLimits(timeout_seconds=5, node_limit=100, progress_interval=1),
                 messages,
                 stop_event,
@@ -233,7 +235,7 @@ class WorkerTests(unittest.TestCase):
         try:
             kind, rows = messages.get(timeout=10)
             self.assertEqual(kind, "benchmark")
-            self.assertEqual([row.algorithm for row in rows], ["DFS", "ASTAR"])
+            self.assertEqual([row.algorithm for row in rows], ["DFS", "CSP"])
             self.assertTrue(all(isinstance(row, BenchmarkRow) for row in rows))
             self.assertTrue(all(row.puzzle_id == "benchmark-fixture" for row in rows))
         finally:

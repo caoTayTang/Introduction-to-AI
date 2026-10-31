@@ -19,7 +19,7 @@ the [31 October experiment](../docs/benchmarks/2026-10-31-lightup-dfs-csp.md):
 five different seeds per size/difficulty, 120 paired runs on 60 boards, with
 30 s / 500,000 nodes / 512 MiB estimated-memory limits. The two results frames
 show all twelve configurations. `lightup-board.tex` contains the actual current
-seed-70097 board and a validated CSP solution. Older DFS/A* numbers are archived.
+seed-70097 board and a validated CSP solution. Older measurements are archived.
 
 ## Build
 

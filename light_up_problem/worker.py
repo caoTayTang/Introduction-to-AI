@@ -8,7 +8,7 @@ from dataclasses import asdict
 from multiprocessing.queues import Queue
 from typing import Any
 
-from light_up_problem.algorithms.search import SearchEvent, SearchLimits, astar, backtracking_mrv_cp, depth_first_search
+from light_up_problem.algorithms.search import SearchEvent, SearchLimits, backtracking_mrv_cp, depth_first_search
 from light_up_problem.core.model import Puzzle
 
 
@@ -41,7 +41,7 @@ def solver_worker(
                 break
 
     try:
-        solvers = {"DFS": depth_first_search, "A*": astar, "CSP": backtracking_mrv_cp}
+        solvers = {"DFS": depth_first_search, "CSP": backtracking_mrv_cp}
         if algorithm.upper() not in solvers:
             raise ValueError(f"Unknown search algorithm: {algorithm}")
         solver = solvers[algorithm.upper()]

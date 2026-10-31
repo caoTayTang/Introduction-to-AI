@@ -73,7 +73,7 @@ excluding live demonstrations. The decks (VI/EN) share the same frame order.
   generation/startup/animation are excluded. Every SOLVED output is validated.
 - Describe the observed tradeoff, not a universal speed claim: propagation can
   reduce branching substantially while costing more on already easy boards.
-  Check the current CSV for totals; older DFS/A* results are historical and use
+  Check the current CSV for totals; older results are historical and use
   the old generator. Neither DFS nor CSP promises minimum bulb count.
 - Five seeds are a small sample; uniqueness is unchecked; allocation is not RSS
   or the estimate used for MEMORY_LIMIT. Next: more seeds and CP/MRV ablations.
@@ -90,8 +90,8 @@ pipes_problem/maps/custom/cdai.json`).
 few bulbs manually (watch conflicts turn red), then Solve with DFS, Pause and
 use > to advance, then Resume Search. Repeat with CSP (MRV + CP): point out
 individual forced bulbs, forbidden-cell marks and checkpoint restoration. The
-in-app Compare action remains DFS/A*; use the benchmark suite for the published
-DFS/CSP comparison.
+Compare DFS and CSP on the same board, then use the benchmark suite for the
+published multi-seed DFS/CSP comparison.
 
 Choose demo inputs in advance and rehearse their event sequences.
 

@@ -1,0 +1,18 @@
+\begin{tikzpicture}[x=.35cm,y=-.35cm,font=\tiny]
+% Snapshot after root CP: 7x7 easy, seed 70098; coordinates below are zero-based.
+\foreach \c/\r in {0/0,2/0,3/0,4/0,5/0,6/0,2/1,3/1,4/1,6/1,0/2,1/2,3/2,4/2,5/2,0/3,1/3,2/3,3/3,4/3,5/3,6/3,0/4,2/4,5/4,0/5,2/5,0/6,2/6}{\fill[orange!12] (\c,\r) rectangle ++(1,1);}
+\foreach \c/\r in {1/4,3/4,4/4,6/4,6/5,6/6}{\fill[blue!30] (\c,\r) rectangle ++(1,1);}
+\foreach \c/\r/\n in {1/0/-1,0/1/2,1/1/1,5/1/3,2/2/2,6/2/-1,1/5/0,5/5/0}{
+  \fill[ink] (\c,\r) rectangle ++(1,1);
+  \ifnum\n>-1\node[white] at (\c+.5,\r+.5) {\n};\fi}
+\foreach \i in {0,...,7}{
+  \draw[muted!40,thin] (\i,0)--(\i,7);
+  \draw[muted!40,thin] (0,\i)--(7,\i);}
+\foreach \c/\r in {0/0,5/0,2/1,6/1,0/2,5/2,2/3}{\fill[orange!85!black] (\c+.5,\r+.5) circle (.16);}
+\fill[blue] (6.5,4.5) circle (.22);
+\draw[red!80!black,very thick] (6.08,5.08) rectangle (6.92,5.92);
+\foreach \i in {0,...,6}{
+  \pgfmathtruncatemacro{\labelnum}{\i+1}
+  \node[muted] at (\i+.5,-.35) {\labelnum};
+  \node[muted] at (-.35,\i+.5) {\labelnum};}
+\end{tikzpicture}

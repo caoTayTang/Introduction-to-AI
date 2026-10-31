@@ -117,8 +117,8 @@ The pseudocode expresses the backtracking flow; the code uses explicit stack
 frames. A checkpoint restores both bulbs and legal domains. The function
 \code{backtracking\_mrv\_cp} propagates at the root as well as after each choice
 and stops at the first solution. Neither DFS nor CSP guarantees minimum bulb
-count; A* remains in the application but is outside this comparison. A CSP
-node can contain several forced bulbs, so nodes are not equal units of work:
+count. A CSP node can contain several forced bulbs, so nodes are not equal
+units of work:
 the benchmark measures the combined MRV, CP and value-ordering implementation.
 
 \subsection{Demonstration and experimental protocol}
@@ -228,8 +228,8 @@ but both caps remain enabled. Among 52 jointly solved pairs, CSP is faster on
 15 and the median $t_{DFS}/t_{CSP}=0.73$; CSP is therefore not uniformly faster.
 Small well-pruned boards can favor DFS because CP costs more per node, while
 CSP improves coverage of larger branching cases within the same budgets.
-Bulb counts describe the returned solutions, not proven optima. Historical
-25 October DFS/A* results use the older generator and are not pooled here.
+Bulb counts describe the returned solutions, not proven optima. The 25 October
+measurements use the older generator and are not pooled here.
 
 Five seeds per configuration are a small sample; wall-density difficulty is
 not calibrated and uniqueness is unchecked. Next steps are broader inputs,

@@ -10,23 +10,37 @@ kiếm mù; Giải thuật tìm kiếm heuristic; Hiện thực và minh họa t
 Kết quả thực nghiệm; Nhận xét. Phụ lục `lightup-per-input.tex` chứa kết quả
 thời gian/bộ nhớ của từng seed Light Up, lấy từ CSV gốc.
 
-Điền giảng viên, lớp, họ tên và MSSV trong `metadata.tex` trước khi nộp.
-Hiện chưa có thông tin này; không dùng lại danh tính trong báo cáo mẫu.
+Thông tin giảng viên, lớp, họ tên và MSSV được lấy từ `metadata.tex` cho
+báo cáo và cả hai bản slide. Khi đổi thành viên hoặc giảng viên, sửa file này
+rồi biên dịch lại. Tên tiếng Việt được giữ đầy đủ dấu trong bản tiếng Anh.
 
-Từ thư mục gốc:
+Từ thư mục gốc, biên dịch và đặt tên PDF như sau. Dùng thư mục build riêng để
+hai nguồn `report/main-vi.tex` và `slides/main-vi.tex` không ghi đè PDF của nhau:
 
 ```sh
-mkdir -p output/final
-tectonic report/main-vi.tex --outdir output/final
-tectonic slides/submission.tex --outdir output/final
-python3 scripts/package_submission.py
+mkdir -p output/final output/build/report-vi output/build/slide-vi output/build/slide-en
+
+tectonic report/main-vi.tex --outdir output/build/report-vi && \
+  cp output/build/report-vi/main-vi.pdf output/final/report-vi.pdf
+
+tectonic slides/main-vi.tex --outdir output/build/slide-vi && \
+  cp output/build/slide-vi/main-vi.pdf output/final/slide.-vi.pdf
+
+tectonic slides/main-en.tex --outdir output/build/slide-en && \
+  cp output/build/slide-en/main-en.pdf output/final/slide-en.pdf
 ```
+
+Ba đầu ra là `output/final/report-vi.pdf`, `output/final/slide.-vi.pdf` và
+`output/final/slide-en.pdf`. Dấu chấm trong `slide.-vi.pdf` được giữ đúng tên
+yêu cầu. Hai bản slide dùng bố cục gốc của `slides/main-vi.tex` và
+`slides/main-en.tex`; phần Light Up đồng bộ về nội dung, công thức MRV/gain và
+biểu đồ mean. `slides/submission.tex` là bản dùng theme HCMUT riêng.
 
 Có thể dùng XeLaTeX trên Overleaf với `report` và `slides` giữ cạnh nhau.
 Times New Roman/Arial có phông thay thế tự do nếu máy không cài sẵn.
-Logo trường trích từ báo cáo mẫu do nhóm cung cấp.
-Slides dùng `slides/beamerthemeHCMUT.sty`, dựa trên Beamer Madrid, có logo
-HCMUT, tên trường/khoa và số mục của từng game. Cần giữ file theme khi biên dịch.
+Logo trường trích từ báo cáo mẫu do nhóm cung cấp. Minh họa gain của seed
+70098 dùng chung hai file TikZ `assets/lightup-gain-70098-a.tex` và
+`assets/lightup-gain-70098-b.tex` giữa báo cáo và slide; cần giữ các file này.
 
 Pipes dùng lô 25/10/2026: 9 bản đồ × 2 thuật toán × 5 lần lặp.
 Light Up dùng lô 31/10/2026: 60 bản khác nhau × 2 thuật toán.

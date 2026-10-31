@@ -35,7 +35,7 @@ UNLIT = (48, 62, 79)
 WALL = (21, 27, 38)
 ERROR = (243, 94, 105)
 FOCUS = (77, 190, 255)
-ALGORITHM_OPTIONS = {"DFS": "DFS", "A*": "A*", "CSP (MRV + CP)": "CSP"}
+ALGORITHM_OPTIONS = {"DFS": "DFS", "CSP (MRV + CP)": "CSP"}
 
 
 class LightUpApp:
@@ -176,7 +176,6 @@ class LightUpApp:
             ("runtime", "Runtime: 0.00s", 318),
             ("memory", "Peak memory: —", 355),
             ("cost", "Solution cost: —", 392),
-            ("score", "", 429),
             ("timer", "Play time: 00:00", 477),
             ("game_status", "Not checked", 514),
             ("seed_info", "Seed: —", 551),
@@ -185,14 +184,14 @@ class LightUpApp:
         self.buttons["benchmark"] = self._widget(
             UIButton(
                 pygame.Rect(right_x + 10, 596, right_w - 20, 38),
-                "Compare DFS and A*",
+                "Compare DFS and CSP",
                 manager,
                 object_id="#lightup_button",
             )
         )
         label("comparison", "Algorithm / seconds / KiB / nodes", right_x + 2, 644, right_w - 8)
         label("comparison_dfs", "DFS —", right_x + 2, 672, right_w - 8)
-        label("comparison_astar", "A* —", right_x + 2, 700, right_w - 8)
+        label("comparison_csp", "CSP —", right_x + 2, 700, right_w - 8)
         label("comparison_status", "", right_x + 2, 728, right_w - 8)
         label(
             "controls",
@@ -247,7 +246,7 @@ class LightUpApp:
             self.benchmark_rows.clear()
             self.labels["comparison"].set_text("Algorithm / seconds / KiB / nodes")
             self.labels["comparison_dfs"].set_text("DFS —")
-            self.labels["comparison_astar"].set_text("A* —")
+            self.labels["comparison_csp"].set_text("CSP —")
             self.labels["comparison_status"].set_text("")
             self.game_started_at = time.perf_counter()
             self.message = f"Loaded {self.puzzle.puzzle_id}; witness checked, uniqueness not tested."
@@ -345,7 +344,7 @@ class LightUpApp:
         self.benchmark_rows.clear()
         self.search_status = "Benchmarking"
         self.labels["comparison_dfs"].set_text("DFS running…")
-        self.labels["comparison_astar"].set_text("A* queued…")
+        self.labels["comparison_csp"].set_text("CSP queued…")
         self.labels["comparison_status"].set_text("Same puzzle, one run each")
         self.message = "Side-by-side benchmark is running in a worker process."
 
@@ -555,14 +554,13 @@ class LightUpApp:
 
     def _show_benchmark_rows(self, rows: list[BenchmarkRow]) -> None:
         by_algorithm = {row.algorithm: row for row in rows}
-        for key, algorithm in (("comparison_dfs", "DFS"), ("comparison_astar", "ASTAR")):
+        for key, algorithm in (("comparison_dfs", "DFS"), ("comparison_csp", "CSP")):
             row = by_algorithm.get(algorithm)
             if row is None:
                 self.labels[key].set_text(f"{algorithm}: cancelled")
             else:
-                name = "A*" if algorithm == "ASTAR" else algorithm
                 self.labels[key].set_text(
-                    f"{name}  {row.execution_time_seconds:.3f}s  "
+                    f"{algorithm}  {row.execution_time_seconds:.3f}s  "
                     f"{row.peak_python_memory_bytes / 1024:.1f}KiB  {row.nodes_expanded}n"
                 )
         statuses = "  ".join(f"{row.algorithm}: {row.status}" for row in rows)
@@ -672,9 +670,6 @@ class LightUpApp:
             if self.search_result
             else "Peak memory: worker estimate",
             "cost": f"Solution cost: {self.search_result.solution_cost}" if self.search_result else "Solution cost: —",
-            "score": "A*: " + "  •  ".join(
-                f"{key} {stats.get(key) if stats.get(key) is not None else '—'}" for key in ("g", "h", "f")
-            ) if stats.get("algorithm") == "A*" else "",
             "legend": "×: forbidden  •  Blue: focus" if stats.get("algorithm") == "CSP"
             else "Gold: lit   Slate: dark   Blue: focus",
             "timer": f"Play time: {minutes:02d}:{seconds:02d}",

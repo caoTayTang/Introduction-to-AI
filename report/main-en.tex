@@ -74,8 +74,8 @@ Full name & Student ID & Class\\
 Assignment 1 asks the group to pick two problems from the Logic Puzzles at
 \url{https://www.puzzle-pipes.com/} (and related problems on that site) and
 implement, in Python 3, two search algorithms for \textbf{each} problem: one
-\emph{blind} search (DFS or BrFS) and one \emph{heuristic} algorithm (A*, Hill
-Climbing, etc.). The submission must include a step-by-step visual demo (game
+\emph{blind} search (DFS or BrFS) and one \emph{heuristic} algorithm. The
+submission must include a step-by-step visual demo (game
 style), and a report describing how the group studied and implemented each
 problem, with tables of execution time and memory consumption per algorithm per
 input, and an interpretation of those numbers.
@@ -90,7 +90,7 @@ and \textbf{Greedy Best-First} (heuristic).
 the same Logic Puzzles family): place bulbs on white cells so that every white
 cell is illuminated, no two bulbs see each other, and every numbered wall has
 exactly its count of adjacent bulbs. Algorithms: \textbf{DFS} (blind) and
-\textbf{Backtracking + MRV + CP} (heuristic constraint search). A* remains an optional minimum-bulb solver in the application.
+\textbf{Backtracking + MRV + CP} (heuristic constraint search).
 \end{itemize}
 
 Each experimental comparison uses paired inputs under identical resource limits.
@@ -118,7 +118,7 @@ One shared repository, one package per puzzle:
 Introduction-to-AI/
   main.py             Common launcher: uv run main.py [pipes|lightup]
   pipes_problem/      Pipes game, DFS/Greedy, UI, benchmark, tests
-  light_up_problem/   Light Up, DFS/CSP/A*, UI, benchmark, tests
+  light_up_problem/   Light Up, DFS/CSP, UI, benchmark, tests
   docs/               Algorithm analysis, benchmark evidence (CSV + md)
   report/             LaTeX sources of this report (main-vi, main-en)
   slides/             LaTeX sources of the slides (main-vi, main-en)
@@ -163,8 +163,8 @@ state limitations honestly.
 \section{Conclusion}
 The repository provides visual search demonstrations for both puzzles. Pipes
 compares DFS with Greedy Best-First; the updated Light Up experiment compares DFS
-with Backtracking + MRV + CP. A* remains available in Light Up but its historical
-measurements are not mixed with the new generator and five-seed experiment.
+with Backtracking + MRV + CP. The new measurements use the current generator and
+five distinct seeds per configuration; earlier runs are archived separately.
 \begin{itemize}
 \item \textbf{Heuristics have a cost.} Constraint propagation can reduce search
 while costing more per node. On small well-pruned Light Up maps, DFS can be faster;
